@@ -14,7 +14,14 @@ export default defineConfig({
     // WHY: force NODE_ENV=test so src/db/prisma.ts selects the quiet log
     // profile. Without this, a local `npm test` without NODE_ENV exported
     // falls back to the dev profile and dumps expected P2002 errors.
-    env: { NODE_ENV: 'test' },
+    // WHY: deterministic test env — do NOT rely on shell state or a locally
+    // present .env file. STAFF_API_KEY/ADMIN_API_KEY must match the values
+    // used by tests calling /staff and /admin routes.
+    env: {
+      NODE_ENV: 'test',
+      STAFF_API_KEY: 'test_staff_key',
+      ADMIN_API_KEY: 'test_admin_key'
+    },
     include: ['tests/**/*.test.ts'],
     // WHY: Sprint 1/2 has no tests yet; without this, CI fails on empty run.
     passWithNoTests: true,
