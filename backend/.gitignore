@@ -1,7 +1,28 @@
+# Backend-specific ignores. Root .gitignore covers general patterns;
+# entries here are things that only appear in this package.
+
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+
+# Test coverage + caches
 coverage/
+.vitest/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Environment — real files never committed, examples always kept
 .env
 .env.*
 !.env.example
+
+# Local Prisma artifacts (SQLite fallback, journal)
+# WHY: migrations/*.sql MUST be committed — they are the schema history.
+prisma/*.db
+prisma/*.db-journal
+
+# Logs
 *.log
