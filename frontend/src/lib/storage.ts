@@ -43,3 +43,35 @@ export function clearStoredReferralCode(): void {
     // the lookup and clears again on a 404 — self-healing, no user impact.
   }
 }
+
+// WHY: staff key is operator-entered, per-browser, and never baked into
+// the bundle — see docs/DECISIONS.md #5. Persisting it means a staff member
+// does not re-enter it on every reload. Namespaced under the same prefix
+// as the customer code so a future cleanup can find both.
+export const STAFF_KEY_STORAGE_KEY = 'pos-referral-loyalty.staff.key';
+
+export function getStoredStaffKey(): string | null {
+  try {
+    return window.localStorage.getItem(STAFF_KEY_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredStaffKey(key: string): void {
+  try {
+    window.localStorage.setItem(STAFF_KEY_STORAGE_KEY, key);
+  } catch {
+    // WHY: silent — the caller already has the key in memory for this
+    // session. Losing the cache just means re-entry next reload.
+  }
+}
+
+export function clearStoredStaffKey(): void {
+  try {
+    window.localStorage.removeItem(STAFF_KEY_STORAGE_KEY);
+  } catch {
+    // WHY: best-effort — a failed clear leaves a stale key that the next
+    // 401 will catch and clear again. Self-healing, no user impact.
+  }
+}

@@ -157,3 +157,30 @@ export interface AdminRedemptionItem {
 // DECISIONS #4). Consumers parse at the point of use.
 export type Settings = Record<string, string>;
 export type UpdateSettingsInput = Record<string, string>;
+
+// --- F3 Staff -------------------------------------------------------------
+
+// WHY: mirrors §F3 of docs/API-CONTRACT.md. Header X-Staff-Key is added
+// per-request via RequestOptions.staffKey — the types only cover the JSON
+// body and the response.
+export interface StaffRedeemInput {
+  customerCode: string;
+  points: number;
+}
+
+export interface StaffRedeemResponse {
+  redemptionCode: string;
+  pointsUsed: number;
+  pointsRemaining: number;
+  // ISO 8601 — the backend serializes a Date via .toISOString() in the route.
+  expiresAt: string;
+}
+
+export interface StaffConfirmInput {
+  redemptionCode: string;
+}
+
+export interface StaffConfirmResponse {
+  status: 'REDEEMED';
+  redeemedAt: string;
+}
