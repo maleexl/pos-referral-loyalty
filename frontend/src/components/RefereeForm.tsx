@@ -70,7 +70,7 @@ export default function RefereeForm({
   if (submitted) {
     return (
       <section
-        data-testid="referee-form"
+        data-testid="referee-success"
         className="space-y-2 rounded border border-green-200 bg-green-50 p-4 text-sm text-green-800"
       >
         <p className="font-medium">Invitation sent.</p>
@@ -113,6 +113,7 @@ export default function RefereeForm({
           </label>
           <input
             id="referee-email"
+            data-testid="referee-email"
             type="email"
             autoComplete="email"
             required
@@ -131,6 +132,7 @@ export default function RefereeForm({
           </label>
           <input
             id="referee-phone"
+            data-testid="referee-phone"
             type="tel"
             autoComplete="tel"
             required
@@ -146,6 +148,7 @@ export default function RefereeForm({
           </label>
           <input
             id="referee-name"
+            data-testid="referee-name"
             type="text"
             autoComplete="name"
             required

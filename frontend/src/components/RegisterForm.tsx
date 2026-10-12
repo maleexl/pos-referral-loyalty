@@ -90,6 +90,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           </label>
           <input
             id="register-phone"
+            data-testid="register-phone"
             type="tel"
             autoComplete="tel"
             required
@@ -105,6 +106,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           </label>
           <input
             id="register-name"
+            data-testid="register-name"
             type="text"
             autoComplete="name"
             required
