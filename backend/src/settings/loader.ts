@@ -9,6 +9,7 @@
  */
 import { prisma } from '../db/prisma.js';
 import { InternalError } from '../errors.js';
+import { SETTING_KEYS } from './schema.js';
 
 // WHY: cache lives only as long as the process — no Redis in MVP.
 // Simplicity > freshness at MVP scale; admin PATCH calls invalidateCache().
@@ -144,5 +145,34 @@ export const settings = {
   // suspects the change was lost.
   invalidateCache(): void {
     cache = null;
+  },
+
+  // --- bulk read -----------------------------------------------------------
+  // WHY: admin PATCH response returns the full settings map (API-CONTRACT
+  // §F4 — "updated settings object"). Returning everything keeps the client
+  // state-consistent in one roundtrip and avoids the "which keys did I
+  // forget to update in the UI?" problem.
+  //
+  // WHY ordered by SETTING_KEYS: deterministic key order in the response so
+  // diffs are stable across calls. Any orphan keys not present in the schema
+  // (should not exist in practice) trail the known keys, sorted lexically.
+  async getAll(): Promise<Record<string, string>> {
+    // Same fail-fast env check as getRaw().
+    ttlMs();
+    const values = isFresh() && cache ? cache.values : await loadAll();
+
+    const ordered: Record<string, string> = {};
+    for (const key of SETTING_KEYS) {
+      const value = values.get(key);
+      if (value !== undefined) ordered[key] = value;
+    }
+    const knownKeys = new Set<string>(SETTING_KEYS);
+    const orphans = [...values.keys()]
+      .filter((k) => !knownKeys.has(k))
+      .sort();
+    for (const k of orphans) {
+      ordered[k] = values.get(k) as string;
+    }
+    return ordered;
   }
 };

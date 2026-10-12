@@ -14,6 +14,7 @@ import { customerRoutes } from './routes/customers.js';
 import { referralRoutes } from './routes/referrals.js';
 import { internalRoutes } from './routes/internal.js';
 import { staffRoutes } from './routes/staff.js';
+import { adminRoutes } from './routes/admin.js';
 
 export interface BuildAppOptions {
   /**
@@ -119,6 +120,10 @@ export async function buildApp(
   // would still apply; the URL shape is a composition concern, not the
   // plugin's. This also makes /staff a single grep target for ops review.
   await app.register(staffRoutes, { prefix: '/staff' });
+  // WHY prefix here (not inside the plugin): mirrors staffRoutes — the auth
+  // hook scope is the plugin, the URL shape is the composition root's
+  // concern. /admin becomes a single grep target for ops review.
+  await app.register(adminRoutes, { prefix: '/admin' });
 
   return app;
 }

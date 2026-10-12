@@ -7,22 +7,25 @@
  */
 import { randomBytes, scryptSync } from 'node:crypto';
 import { prisma } from '../src/db/prisma.js';
+import {
+  SETTING_KEYS,
+  SETTING_SCHEMA
+} from '../src/settings/schema.js';
 
 // WHY: settings keys live here as named constants — the settings loader and
 // API contract both reference the same identifiers. If a key is misspelled
 // in one place, TS will not catch it (they are strings), but at least the
 // source stays discoverable via grep across the codebase.
-const SETTINGS_SEED: ReadonlyArray<{ key: string; value: string }> = [
-  // Business values — see docs/SPEC.md §5 BR-6 and docs/DECISIONS.md #4.
-  { key: 'points_per_referral', value: '100' },
-  { key: 'referral_expiry_days', value: '30' },
-  { key: 'points_to_thb_rate', value: '1' },
-  { key: 'reward_code_length', value: '8' },
-  // WHY: redemption code TTL, distinct from referral_expiry_days. SPEC F3
-  // says "configurable, default 7 days"; the value lives here so ops can tune
-  // it without a redeploy (BR-6).
-  { key: 'redemption_expiry_days', value: '7' }
-];
+// WHY: derive the seed list from SETTING_SCHEMA (settings/schema.ts) instead
+// of duplicating key/default pairs here. That module is the single source of
+// truth for tunable business config — its bounds and defaults feed both this
+// seed and the PATCH /admin/settings validator, so the two cannot drift.
+// See docs/SPEC.md §5 BR-6 and docs/DECISIONS.md #4 for the policy.
+const SETTINGS_SEED: ReadonlyArray<{ key: string; value: string }> =
+  SETTING_KEYS.map((key) => ({
+    key,
+    value: SETTING_SCHEMA[key].defaultValue
+  }));
 
 // WHY: salt + hash format is `scrypt$N$salt$hash` so the format is self-describing
 // and can be upgraded later (e.g. to argon2) without an ambiguous column.
