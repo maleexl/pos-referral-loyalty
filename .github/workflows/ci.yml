@@ -1,0 +1,72 @@
+# FILE: .github/workflows/ci.yml
+# PURPOSE: Continuous integration for the POS Referral & Loyalty monorepo.
+#          Runs backend lint + typecheck + Vitest on push/PR to main.
+#          No-ops (green) until backend/package.json exists; the scaffold is a later step.
+# CALLED BY: GitHub Actions on push and PR to main.
+# CALLS: backend npm scripts (lint, typecheck, test) via npm run --if-present.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref — saves CI minutes and avoids stale results.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — lint + typecheck + test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # WHY: hashFiles() is only valid in step-level 'if', not job-level 'if'.
+      # We detect the backend scaffold once here and gate the real steps on its output.
+      # This keeps main green during early skeleton commits and auto-activates later.
+      - name: Detect backend scaffold
+        id: scaffold
+        working-directory: .
+        run: |
+          if [ -f backend/package.json ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "backend/package.json not found — skipping backend CI steps."
+          fi
+
+      - name: Setup Node 20
+        if: steps.scaffold.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        if: steps.scaffold.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Lint
+        if: steps.scaffold.outputs.ready == 'true'
+        # --if-present keeps this step harmless if a script is temporarily missing.
+        run: npm run lint --if-present
+
+      - name: Type check
+        if: steps.scaffold.outputs.ready == 'true'
+        run: npm run typecheck --if-present
+
+      - name: Unit tests (Vitest)
+        if: steps.scaffold.outputs.ready == 'true'
+        # WHY: --if-present so CI does not fail before tests exist; becomes real once tests land.
+        run: npm test --if-present
