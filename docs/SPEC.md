@@ -75,7 +75,7 @@ is out of scope (see DECISIONS.md).
 
 ## 4. Data Model
 
-See `docs/schema.prisma` for the authoritative Prisma schema.
+See `backend/prisma/schema.prisma` for the authoritative Prisma schema.
 
 | Entity | Purpose |
 |--------|---------|
