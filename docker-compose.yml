@@ -1,0 +1,41 @@
+# FILE: docker-compose.yml
+# PURPOSE: Local Postgres for development. Reads credentials from the root
+#          .env (not committed). Business config lives in the DB settings
+#          table, NOT here — see docs/DECISIONS.md #4.
+# CALLED BY: Developer via `docker compose up -d` from the repo root.
+# CALLS: postgres image (pinned major), named volume postgres_data.
+
+services:
+  postgres:
+    # WHY: pin the major version. Alpine keeps the image small and startup fast.
+    image: postgres:16-alpine
+    container_name: pos-referral-loyalty-postgres
+    restart: unless-stopped
+
+    # WHY: credentials come from environment, not from this file.
+    # Docker Compose reads the root .env automatically.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    ports:
+      # WHY: POSTGRES_PORT default 5432 — allow override to avoid host conflicts.
+      - "${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      # WHY: named volume — data survives `docker compose down` but not `-v`.
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      # WHY: prisma migrate needs a *ready* DB, not just a running container.
+      # pg_isready is the canonical readiness probe for Postgres.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  postgres_data:
+    name: pos_referral_loyalty_postgres_data

@@ -57,6 +57,11 @@ jobs:
         if: steps.scaffold.outputs.ready == 'true'
         run: npm ci
 
+      - name: Generate Prisma client
+        if: steps.scaffold.outputs.ready == 'true'
+        # WHY: tsc and eslint both need the generated @prisma/client types.
+        run: npx prisma generate
+
       - name: Lint
         if: steps.scaffold.outputs.ready == 'true'
         # --if-present keeps this step harmless if a script is temporarily missing.

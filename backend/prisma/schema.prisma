@@ -1,0 +1,190 @@
+// FILE: backend/prisma/schema.prisma
+// PURPOSE: Prisma schema — source of truth for the database. Generates both the
+//          SQL migration and the TypeScript client, so schema and code cannot drift.
+// CALLED BY: prisma CLI (migrate, generate, db seed); @prisma/client at runtime.
+// CALLS: DATABASE_URL env (see backend/.env).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  EXPIRED
+}
+
+// Reward.type distinguishes the *kind* of ledger entry.
+// WHY: One table for all point movements keeps the balance formula trivial
+// (SUM(points)) and the audit trail unified. See docs/DECISIONS.md #3.
+enum RewardType {
+  REFERRAL_BONUS
+  REDEMPTION
+  REFUND
+}
+
+enum RewardStatus {
+  ISSUED
+  REDEEMED
+  EXPIRED
+}
+
+// ---------------------------------------------------------------------------
+// Customer — end user of the shop
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String   @unique
+  name         String
+  // WHY: human-readable code (e.g. ALICE123) shared as the referral handle.
+  // Uniqueness enforced at DB level so app-level races cannot collide.
+  referralCode String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  referralsAsReferrer Referral[] @relation("Referrer")
+  referralAsReferee   Referral?  @relation("Referee")
+  rewards             Reward[]
+  visits              PosVisit[]
+
+  @@map("customers")
+}
+
+// ---------------------------------------------------------------------------
+// Referral — the link between referrer and referee
+// ---------------------------------------------------------------------------
+
+model Referral {
+  id          String         @id @default(uuid())
+  referrerId  String
+  // BR-2: one customer can be a referee at most once.
+  // WHY: UNIQUE at DB level — app-level check alone cannot prevent races.
+  refereeId   String         @unique
+  status      ReferralStatus @default(PENDING)
+  // BR-4: expiresAt = createdAt + referral_expiry_days (setting).
+  // WHY: store the computed deadline, not the days — so a later settings
+  // change does NOT retroactively move existing referrals' deadlines.
+  expiresAt   DateTime
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  referrer Customer @relation("Referrer", fields: [referrerId], references: [id])
+  referee  Customer @relation("Referee", fields: [refereeId], references: [id])
+  rewards  Reward[]
+
+  // WHY: list admin referrals by referrer; sweep expiring referrals by status+expiresAt.
+  @@index([referrerId])
+  @@index([status, expiresAt])
+  @@map("referrals")
+}
+
+// ---------------------------------------------------------------------------
+// Reward — signed-points ledger entry
+// ---------------------------------------------------------------------------
+
+model Reward {
+  id         String       @id @default(uuid())
+  customerId String
+  type       RewardType
+  // points is SIGNED: positive = earn, negative = spend.
+  // Ledger pattern: balance = SUM(points) WHERE customer_id = X.
+  // Rationale: single source of truth, easy audit, no boolean flags.
+  points     Int
+  status     RewardStatus @default(ISSUED)
+
+  // Referral bonus link (null for REDEMPTION / REFUND entries).
+  referralId String?
+
+  // Redemption fields (null for REFERRAL_BONUS entries).
+  // WHY: redemptionCode is the short human-readable token the customer shows
+  // to staff; UNIQUE at DB level prevents accidental collision across issuers.
+  redemptionCode String?   @unique
+  expiresAt      DateTime?
+  redeemedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer Customer  @relation(fields: [customerId], references: [id])
+  referral Referral? @relation(fields: [referralId], references: [id])
+
+  // BR-3: one referral yields at most one reward OF A GIVEN TYPE.
+  // WHY: Postgres treats NULLs as distinct in unique constraints, so REDEMPTION
+  // entries (referralId = NULL) are unaffected — this constraint only limits
+  // REFERRAL_BONUS to one-per-referral.
+  @@unique([referralId, type])
+  @@index([customerId])
+  @@index([status, expiresAt])
+  @@map("rewards")
+}
+
+// ---------------------------------------------------------------------------
+// PosVisit — raw visit record from the POS (mock in MVP)
+// ---------------------------------------------------------------------------
+
+model PosVisit {
+  id         String   @id @default(uuid())
+  customerId String
+  // WHY: amount is stored in the smallest currency unit (satang for THB) to
+  // avoid floating-point money. Mock POS sends integer baht; conversion lives
+  // in the usecase layer, not here.
+  amount     Int
+  note       String?
+  visitedAt  DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@index([customerId, visitedAt])
+  @@map("pos_visits")
+}
+
+// ---------------------------------------------------------------------------
+// Setting — DB-backed business config (see docs/DECISIONS.md #4)
+// ---------------------------------------------------------------------------
+
+model Setting {
+  // WHY: `key` is the natural PK — settings are looked up by name, and a
+  // surrogate UUID would only add indirection.
+  key       String   @id
+  // WHY: value is String so a single table can hold numbers, booleans, and
+  // future complex values. Type coercion lives in the settings loader, not
+  // in the schema. API-CONTRACT returns values as strings, e.g. "100".
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// ---------------------------------------------------------------------------
+// Staff — staff / admin identity
+// ---------------------------------------------------------------------------
+
+// WHY: SPEC §4 lists Staff, but SPEC §2 + API-CONTRACT currently authenticate
+// via env-var keys (STAFF_API_KEY / ADMIN_API_KEY), not DB lookup. This model
+// is included as a forward-looking placeholder for multi-staff support
+// (per-staff keys, audit trail) and is NOT yet wired into the auth path.
+model Staff {
+  id        String   @id @default(uuid())
+  name      String
+  // WHY: store a hash, never the raw key — same rule as passwords.
+  // Algorithm choice is a Sprint 3 concern; schema is agnostic.
+  keyHash   String   @unique
+  role      String // "STAFF" | "ADMIN" — string for now; may become enum.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("staff")
+}
