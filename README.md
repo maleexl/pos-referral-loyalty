@@ -16,13 +16,95 @@ Referral and loyalty features for the POS platform. Private project, Sprint 1 in
 
 ## What this is
 
-A backend + frontend for running referrals and loyalty points off a POS. Sprint 1 delivers the
-repo skeleton, contract, and decisions. Business logic lands in later sprints.
+A backend + frontend for running referrals and loyalty points off a POS.
+Backend (F1–F4) and the Customer + Staff pages are implemented; the Admin
+page is a Sprint 3 placeholder. The contract and its rationale live in
+`docs/API-CONTRACT.md` and `docs/DECISIONS.md`.
 
 - Backend — Node.js 20 · TypeScript · Fastify · Prisma · PostgreSQL
 - Frontend — React · Vite · Tailwind
 - Tests — Vitest (unit + integration) · Playwright (E2E)
 - Repo — monorepo (backend, frontend, docs)
+
+---
+
+## Architecture at a glance
+
+Three layers, dependency direction strictly one-way:
+
+    routes/*  →  usecases/*  →  prisma + settings loader
+                              \── errors.ts (typed ApiError hierarchy)
+
+- **Routes** are thin: parse input, call a usecase, serialize the response.
+  No business logic.
+- **Usecases** orchestrate domain + DB + settings. Never import Fastify.
+- **Prisma** is reached only through the singleton in `backend/src/db/prisma.ts`.
+
+Auth is by API key, plugin-scoped, no JWT:
+
+    public     /api/*                 no auth
+    staff      /staff/*               X-Staff-Key
+    admin      /admin/*               X-Admin-Key
+    internal   /internal/mock-pos/*   no auth (mock only)
+
+Business config (points, expiry, code length) lives in the `settings`
+table and is read through typed getters — nothing hardcodes a tunable
+value. See `docs/DECISIONS.md #4`.
+
+## Lifecycles
+
+Two flows drive the product. Diagrams are rendered by GitHub; in a plain
+editor they are just text blocks.
+
+### Referral flow — register → invite → POS visit → completion
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Customer
+    participant B as Backend
+    participant DB as Postgres
+    participant POS as Mock POS
+
+    C->>B: POST /api/customers
+    B->>DB: INSERT customer (referralCode = PREFIX + 4)
+    B-->>C: 201 { referralCode }
+
+    C->>B: POST /api/referrals
+    B->>DB: BEGIN TX
+    B->>DB: self-referral guard, INSERT referee, INSERT referral
+    B->>DB: COMMIT
+    B-->>C: 201 Created
+
+    POS->>B: POST /internal/mock-pos/visits
+    B->>DB: INSERT posVisit (standalone)
+    B->>DB: BEGIN TX
+    B->>DB: UPDATE referral SET COMPLETED WHERE status=PENDING
+    B->>DB: INSERT reward (+points, REFERRAL_BONUS)
+    B->>DB: COMMIT
+    B-->>POS: 200 { referralCompleted: true }
+```
+
+### Redemption flow — staff issues → customer uses → staff confirms
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Staff as Staff
+    participant B as Backend
+    participant DB as Postgres
+
+    Staff->>B: POST /staff/redeem (X-Staff-Key)
+    B->>DB: SELECT SUM(points) — BR-7 balance check
+    B->>DB: INSERT reward (-points, REDEMPTION, ISSUED, code)
+    B-->>Staff: 200 { redemptionCode, pointsRemaining }
+
+    Staff->>B: POST /staff/redeem/confirm (X-Staff-Key)
+    B->>DB: UPDATE reward SET REDEEMED WHERE status=ISSUED
+    B-->>Staff: 200 { status: REDEEMED }
+```
+
+Full walkthrough: `docs/CODE-WALKTHROUGH.md`.
 
 ---
 
