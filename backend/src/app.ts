@@ -10,6 +10,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { ZodError } from 'zod';
 import { ApiError } from './errors.js';
+import { customerRoutes } from './routes/customers.js';
 
 export interface BuildAppOptions {
   /**
@@ -102,6 +103,10 @@ export async function buildApp(
     status: 'ok',
     service: 'pos-referral-loyalty-backend'
   }));
+
+  // WHY: route groups are registered as plugins so their hooks/scopes stay
+  // encapsulated. Order matters only for wildcard routes — none here yet.
+  await app.register(customerRoutes);
 
   return app;
 }

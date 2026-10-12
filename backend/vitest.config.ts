@@ -11,6 +11,10 @@ export default defineConfig({
   test: {
     // WHY: Node environment — no jsdom needed; backend has no browser globals.
     environment: 'node',
+    // WHY: force NODE_ENV=test so src/db/prisma.ts selects the quiet log
+    // profile. Without this, a local `npm test` without NODE_ENV exported
+    // falls back to the dev profile and dumps expected P2002 errors.
+    env: { NODE_ENV: 'test' },
     include: ['tests/**/*.test.ts'],
     // WHY: Sprint 1/2 has no tests yet; without this, CI fails on empty run.
     passWithNoTests: true,

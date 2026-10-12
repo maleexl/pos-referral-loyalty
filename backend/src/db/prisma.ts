@@ -21,10 +21,18 @@ export const prisma =
   new PrismaClient({
     // WHY: log level from env, defaulted to warn in prod to keep logs quiet.
     // 'query' would print every SQL statement — useful in dev, noisy in prod.
+    // WHY: three log profiles:
+    // - development: warn+error (loud during manual debugging)
+    // - test: warn only — expected-and-caught DB errors (e.g. P2002 in the
+    //   referral-code retry loop) must NOT spam test output; if we let them
+    //   through, a passing suite looks like a failing one.
+    // - production: error only (quiet, but real failures reach the log sink)
     log:
-      process.env.NODE_ENV === 'development'
-        ? ['warn', 'error']
-        : ['error']
+      process.env.NODE_ENV === 'test'
+        ? ['warn']
+        : process.env.NODE_ENV === 'development'
+          ? ['warn', 'error']
+          : ['error']
   });
 
 if (process.env.NODE_ENV !== 'production') {
