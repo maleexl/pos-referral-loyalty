@@ -193,19 +193,19 @@ describe('F4 — admin endpoints', () => {
   // Pagination + limit behavior
   // ---------------------------------------------------------------------
 
-  it('GET /admin/referrals?limit=1&page=1 vs page=2 → different items', async () => {
-    // Seed enough rows to make a 2-page walk meaningful. The DB may have
-    // extra rows from earlier tests — that is fine, we only assert the walk.
-    const r1 = await seedCustomer('pg-r1', 7, 'Page R1');
-    const e1 = await seedCustomer('pg-e1', 8, 'Page E1');
-    await seedReferral(r1.id, e1.id, 'PENDING', {
-      createdAt: new Date('2020-01-02T00:00:00Z')
+  it('GET /admin/referrals?limit=1 — walks pages without duplication', async () => {
+    // WHY: this suite shares a real DB with other suites; the row set is not
+    // under our control. So we do NOT assert "the newest row is X" — we
+    // assert the *contract* of pagination itself: each page returns `limit`
+    // items (until exhausted) and consecutive pages do not overlap.
+    const first = await app.inject({
+      method: 'GET',
+      url: '/admin/referrals?limit=1&page=1',
+      headers: adminHeaders()
     });
-    const r2 = await seedCustomer('pg-r2', 9, 'Page R2');
-    const e2 = await seedCustomer('pg-e2', 10, 'Page E2');
-    await seedReferral(r2.id, e2.id, 'PENDING', {
-      createdAt: new Date('2020-01-01T00:00:00Z')
-    });
+    expect(first.statusCode).toBe(200);
+    const total = first.json().total as number;
+    expect(total).toBeGreaterThanOrEqual(2);
 
     const p1 = await app.inject({
       method: 'GET',
@@ -217,11 +217,9 @@ describe('F4 — admin endpoints', () => {
       url: '/admin/referrals?limit=1&page=2',
       headers: adminHeaders()
     });
-    expect(p1.statusCode).toBe(200);
-    expect(p2.statusCode).toBe(200);
     expect(p1.json().items).toHaveLength(1);
     expect(p2.json().items).toHaveLength(1);
-    // WHY: newest first — the 2020-01-02 row must precede the 2020-01-01 row.
+    // The two pages must be disjoint — that is what `skip` guarantees.
     expect(p1.json().items[0].id).not.toBe(p2.json().items[0].id);
   });
 

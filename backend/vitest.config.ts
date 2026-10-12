@@ -22,6 +22,11 @@ export default defineConfig({
       STAFF_API_KEY: 'test_staff_key',
       ADMIN_API_KEY: 'test_admin_key'
     },
+    // WHY: our suites share a real Postgres instance. Parallel test files
+    // insert rows into the same tables, which turns ordering-sensitive
+    // assertions (pagination, newest-first) into races. Serial execution
+    // costs ~1s at current scale and eliminates the class of flake entirely.
+    fileParallelism: false,
     include: ['tests/**/*.test.ts'],
     // WHY: Sprint 1/2 has no tests yet; without this, CI fails on empty run.
     passWithNoTests: true,

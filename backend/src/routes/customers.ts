@@ -11,6 +11,7 @@ import type { Reward } from '@prisma/client';
 import { registerCustomer } from '../usecases/registerCustomer.js';
 import { getCustomerByCode } from '../usecases/getCustomerByCode.js';
 import { listCustomerRewards } from '../usecases/listCustomerRewards.js';
+import { listCustomerReferrals } from '../usecases/listCustomerReferrals.js';
 
 // WHY: shape the customer for the wire. Keep this next to the routes so the
 // API contract has exactly one place to change if the frontend needs more.
@@ -96,6 +97,27 @@ export async function customerRoutes(app: FastifyInstance): Promise<void> {
       return {
         pointsBalance,
         rewards: rewards.map(toRewardApi)
+      };
+    }
+  );
+
+  // --- GET /api/customers/:referralCode/referrals -------------------------
+  // WHY public (no auth): same class of read as GET /api/customers/:code
+  // and GET /api/customers/:code/rewards — a customer inspecting their own
+  // record. The referralCode itself is the capability token; anyone who
+  // knows it is already trusted with this data by the design in DECISIONS #5.
+  app.get<{ Params: { referralCode: string } }>(
+    '/api/customers/:referralCode/referrals',
+    async (req) => {
+      const { items } = await listCustomerReferrals(req.params.referralCode);
+      return {
+        items: items.map((r) => ({
+          id: r.id,
+          status: r.status,
+          createdAt: r.createdAt.toISOString(),
+          completedAt: r.completedAt ? r.completedAt.toISOString() : null,
+          referee: r.referee
+        }))
       };
     }
   );
