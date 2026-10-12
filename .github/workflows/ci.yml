@@ -207,6 +207,12 @@ jobs:
       ADMIN_API_KEY: test_admin_key
       E2E_FRONTEND_URL: http://localhost:5173
       E2E_BACKEND_URL: http://localhost:3000
+      # WHY: backend/src/app.ts registers @fastify/cors ONLY when CORS_ORIGIN
+      # is set. Without it, the browser at :5173 is blocked by the preflight
+      # and every POST /api/* from the customer page fails silently in the
+      # test — the referral card never renders. Backend tests never hit this
+      # because app.inject() bypasses the network; E2E does not.
+      CORS_ORIGIN: http://localhost:5173
 
     steps:
       - name: Checkout
