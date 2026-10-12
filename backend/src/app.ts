@@ -1,13 +1,15 @@
 /**
  * FILE: backend/src/app.ts
  * PURPOSE: Builds and returns the Fastify application instance with plugins,
- *          routes, and (later) error handling wired up. Pure builder — this
+ *          routes, and global error handling wired up. Pure builder — this
  *          module never calls listen(), so tests can exercise it via inject().
- * CALLED BY: backend/src/server.ts (runtime), backend/tests/health.test.ts.
- * CALLS: fastify, @fastify/cors.
+ * CALLED BY: backend/src/server.ts (runtime), tests (health.test.ts, settings.test.ts).
+ * CALLS: fastify, @fastify/cors, zod, backend/src/errors.ts.
  */
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import { ZodError } from 'zod';
+import { ApiError } from './errors.js';
 
 export interface BuildAppOptions {
   /**
@@ -32,6 +34,67 @@ export async function buildApp(
     await app.register(cors, { origin: opts.corsOrigin });
   }
 
+  // -------------------------------------------------------------------------
+  // Global error handler — see docs/API-CONTRACT.md "Standard Errors"
+  // -------------------------------------------------------------------------
+  // WHY: one place to translate thrown errors into the wire format.
+  // Routes/usecases throw typed errors; they never construct HTTP responses.
+  app.setErrorHandler((err, req, reply) => {
+    // --- 1. Domain errors -------------------------------------------------
+    if (err instanceof ApiError) {
+      // WHY: prefer err.message over err.name — messages are user-facing,
+      // names are class identifiers (ConflictError etc.).
+      reply.status(err.statusCode).send({
+        error: err.message,
+        code: err.code
+      });
+      return;
+    }
+
+    // --- 2. Zod validation errors ----------------------------------------
+    // WHY: usecases validate input via zod; failures become 400 with details
+    // so the frontend can highlight individual fields.
+    if (err instanceof ZodError) {
+      reply.status(400).send({
+        error: 'Validation failed',
+        code: 'INVALID_INPUT',
+        // WHY: flatten().fieldErrors gives { [field]: string[] } — stable
+        // shape the frontend can iterate. details may include paths for
+        // nested schemas in the future.
+        details: err.flatten().fieldErrors
+      });
+      return;
+    }
+
+    // --- 3. Everything else = unexpected ---------------------------------
+    // WHY: log at error level with the full stack so ops can diagnose, but
+    // never leak internals to the client in production. In dev, surface the
+    // real message to speed up debugging.
+    req.log.error({ err }, 'unhandled error');
+    const isProd = process.env.NODE_ENV === 'production';
+    // WHY: Fastify types the handler's `err` as `unknown`. Narrow to Error
+    // before touching .message — anything thrown that is not an Error has
+    // no .message field, and in prod we never echo its shape anyway.
+    const message =
+      !isProd && err instanceof Error ? err.message : 'Internal server error';
+    reply.status(500).send({
+      error: message,
+      code: 'INTERNAL'
+    });
+  });
+
+  // WHY: Fastify's default 404 body is { statusCode, error, message } — does
+  // not match API-CONTRACT. Override to keep every response shape consistent.
+  app.setNotFoundHandler((_req, reply) => {
+    reply.status(404).send({
+      error: 'Route not found',
+      code: 'NOT_FOUND'
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Routes
+  // -------------------------------------------------------------------------
   // WHY: /health is intentionally unauthenticated and does NOT touch the DB
   // or any external service — CI, load balancers, and humans rely on it as
   // a pure liveness signal (see SPEC.md §6 Performance).
