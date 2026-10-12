@@ -48,12 +48,40 @@ export interface RegisterCustomerInput {
 
 export type ReferralStatus = 'PENDING' | 'COMPLETED' | 'EXPIRED';
 
+// WHY: shape of the 201 response from POST /api/referrals. The referrer
+// receives this when a referee registers with their code. Kept separate
+// from CustomerReferralItem because the two are different read models:
+// this one is "a referral just created", the other is "my referral list".
 export interface ReferralSummary {
   referralId: string;
   status: ReferralStatus;
   createdAt: string;
   expiresAt: string;
   referee: { id: string; referralCode: string };
+}
+
+// WHY: row shape of GET /api/customers/:referralCode/referrals. Mirrors
+// backend/src/usecases/listCustomerReferrals.ts CustomerReferralItem.
+// No `expiresAt` (the backend does not expose it here) and no referrer
+// fields (the caller already knows their own code — see the usecase's
+// WHY comment). The `completedAt` field is null until the referee visits.
+export interface CustomerReferralItem {
+  id: string;
+  status: ReferralStatus;
+  createdAt: string;
+  completedAt: string | null;
+  referee: {
+    id: string;
+    name: string;
+    referralCode: string;
+  };
+}
+
+// WHY: the endpoint returns { items } with no pagination metadata — see
+// the usecase's WHY comment (bounded per-customer list). Wrapping in
+// Paginated<T> would lie about a `total` the API does not send.
+export interface CustomerReferralListResponse {
+  items: CustomerReferralItem[];
 }
 
 export interface CreateReferralInput {
