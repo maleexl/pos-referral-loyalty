@@ -1,0 +1,21 @@
+{
+  // FILE: tests/tsconfig.json
+  // PURPOSE: TS project for Playwright E2E specs. Editor + typecheck only —
+  //          Playwright transpiles specs itself at runtime.
+  // CALLED BY: tsc --noEmit (manual), editor tooling.
+  // CALLS: (config only, no imports)
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
+  },
+  "include": ["e2e/**/*.ts"]
+}
