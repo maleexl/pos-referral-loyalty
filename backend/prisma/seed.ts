@@ -17,7 +17,11 @@ const SETTINGS_SEED: ReadonlyArray<{ key: string; value: string }> = [
   { key: 'points_per_referral', value: '100' },
   { key: 'referral_expiry_days', value: '30' },
   { key: 'points_to_thb_rate', value: '1' },
-  { key: 'reward_code_length', value: '8' }
+  { key: 'reward_code_length', value: '8' },
+  // WHY: redemption code TTL, distinct from referral_expiry_days. SPEC F3
+  // says "configurable, default 7 days"; the value lives here so ops can tune
+  // it without a redeploy (BR-6).
+  { key: 'redemption_expiry_days', value: '7' }
 ];
 
 // WHY: salt + hash format is `scrypt$N$salt$hash` so the format is self-describing

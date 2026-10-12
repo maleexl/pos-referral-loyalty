@@ -13,6 +13,7 @@ import { ApiError } from './errors.js';
 import { customerRoutes } from './routes/customers.js';
 import { referralRoutes } from './routes/referrals.js';
 import { internalRoutes } from './routes/internal.js';
+import { staffRoutes } from './routes/staff.js';
 
 export interface BuildAppOptions {
   /**
@@ -114,6 +115,10 @@ export async function buildApp(
   await app.register(customerRoutes);
   await app.register(referralRoutes);
   await app.register(internalRoutes);
+  // WHY prefix here (not inside the plugin): the auth hook in staffRoutes
+  // would still apply; the URL shape is a composition concern, not the
+  // plugin's. This also makes /staff a single grep target for ops review.
+  await app.register(staffRoutes, { prefix: '/staff' });
 
   return app;
 }

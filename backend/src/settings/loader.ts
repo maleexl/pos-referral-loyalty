@@ -21,6 +21,7 @@ const KEY_POINTS_PER_REFERRAL = 'points_per_referral';
 const KEY_REFERRAL_EXPIRY_DAYS = 'referral_expiry_days';
 const KEY_POINTS_TO_THB_RATE = 'points_to_thb_rate';
 const KEY_REWARD_CODE_LENGTH = 'reward_code_length';
+const KEY_REDEMPTION_EXPIRY_DAYS = 'redemption_expiry_days';
 
 type Cache = {
   values: Map<string, string>;
@@ -132,6 +133,9 @@ export const settings = {
   },
   getRewardCodeLength(): Promise<number> {
     return settings.asInt(KEY_REWARD_CODE_LENGTH);
+  },
+  getRedemptionExpiryDays(): Promise<number> {
+    return settings.asInt(KEY_REDEMPTION_EXPIRY_DAYS);
   },
 
   // --- cache control -------------------------------------------------------
