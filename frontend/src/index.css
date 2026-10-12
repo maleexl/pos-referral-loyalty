@@ -1,0 +1,29 @@
+/*
+ * FILE: frontend/src/index.css
+ * PURPOSE: Global stylesheet. Declares the Tailwind layers once, then any
+ *          app-wide base styles. Kept tiny — component styles live with
+ *          their components via utility classes.
+ * CALLED BY: frontend/src/main.tsx (imported once at app boot).
+ * CALLS: tailwindcss (via PostCSS at build time).
+ */
+
+/* WHY: the three @tailwind directives are the contract for Tailwind v3 —
+ * removing or reordering them silently disables every utility class. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* WHY: use @layer base so overrides land in Tailwind's "base" bucket and
+ * can still be overridden by utilities in components (specificity order). */
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    /* WHY: Tailwind preflight already resets margin; this just opts into
+     * the system font stack + antialiasing without a custom font file. */
+    -webkit-font-smoothing: antialiased;
+  }
+}

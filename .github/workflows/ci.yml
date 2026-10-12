@@ -116,3 +116,59 @@ jobs:
       - name: Unit tests (Vitest)
         if: steps.scaffold.outputs.ready == 'true'
         run: npm test --if-present
+
+  frontend:
+    name: Frontend — lint + typecheck + build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # WHY: mirrors the backend guard — keeps main green while the
+      # frontend is a skeleton, and auto-activates the moment
+      # frontend/package.json is committed.
+      - name: Detect frontend scaffold
+        id: scaffold
+        working-directory: .
+        run: |
+          if [ -f frontend/package.json ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "frontend/package.json not found — skipping frontend CI steps."
+          fi
+
+      - name: Setup Node 20
+        if: steps.scaffold.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          # WHY: separate cache key from backend — a shared "npm" cache with
+          # only frontend/package-lock.json as the path would miss backend
+          # hits (and vice versa). Naming the path is what keys the cache.
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        if: steps.scaffold.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Lint
+        if: steps.scaffold.outputs.ready == 'true'
+        run: npm run lint
+
+      - name: Type check
+        if: steps.scaffold.outputs.ready == 'true'
+        run: npm run typecheck
+
+      # WHY: build (not just typecheck) so a broken Tailwind config, a bad
+      # import path, or a Vite plugin issue fails CI rather than production.
+      - name: Build
+        if: steps.scaffold.outputs.ready == 'true'
+        run: npm run build
+

@@ -1,0 +1,26 @@
+<!doctype html>
+<!--
+  FILE: frontend/index.html
+  PURPOSE: Vite entry HTML. Mounts the React app into #root and loads
+           src/main.tsx as an ES module. Nothing app-specific lives here —
+           all routing/layout is React-side.
+  CALLED BY: Vite dev server + build (both resolve /src/main.tsx).
+  CALLS: /src/main.tsx (module).
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- WHY: viewport meta is required for correct rendering on mobile POS
+         terminals and prevents the browser from falling back to a zoomed-out
+         desktop layout. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>POS Referral &amp; Loyalty</title>
+  </head>
+  <body>
+    <!-- WHY: a single empty mount point. React owns everything inside it;
+         no server-rendered markup is injected here in Sprint 2. -->
+    <div id="root"></div>
+    <!-- WHY: type="module" so Vite can apply HMR + tree-shake in build. -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
