@@ -266,6 +266,11 @@ All admin endpoints require header `X-Admin-Key`.
 
 ### GET /admin/referrals?status=&page=&limit=
 
+**Query params:**
+- `status` (optional) — PENDING | COMPLETED | EXPIRED
+- `page` (optional, default 1)
+- `limit` (optional, default 20, max 100)
+
 **Response 200:**
 {
   "total": 42,
@@ -276,18 +281,30 @@ All admin endpoints require header `X-Admin-Key`.
       "id": "uuid",
       "status": "COMPLETED",
       "createdAt": "...",
-      "completedAt": "...",
-      "referrer": { "id": "...", "name": "Alice", "code": "ALICE123" },
-      "referee": { "id": "...", "name": "Bob", "code": "BOB456" }
+      "completedAt": "..." | null,
+      "expiresAt": "...",
+      "referrer": { "id": "...", "name": "Alice", "referralCode": "ALICE123" },
+      "referee": { "id": "...", "name": "Bob", "referralCode": "BOB456" }
     }
   ]
 }
 
-### GET /admin/redemptions
+**Errors:** 401 UNAUTHORIZED, 400 INVALID_INPUT (bad status/page/limit)
+
+### GET /admin/redemptions?page=&limit=
+
+**Query params:**
+- `page` (optional, default 1)
+- `limit` (optional, default 20, max 100)
+
+Returns only Reward rows with `type = REDEMPTION` (referral bonuses are
+excluded).
 
 **Response 200:**
 {
   "total": 5,
+  "page": 1,
+  "limit": 20,
   "items": [
     {
       "id": "uuid",
@@ -296,31 +313,45 @@ All admin endpoints require header `X-Admin-Key`.
       "code": "R8K2MX9Q",
       "status": "REDEEMED",
       "createdAt": "...",
-      "redeemedAt": "..."
+      "redeemedAt": "..." | null,
+      "expiresAt": "..." | null
     }
   ]
 }
 
+**Errors:** 401 UNAUTHORIZED, 400 INVALID_INPUT (bad page/limit)
+
 ### GET /admin/settings
 
-**Response 200:**
+**Response 200:** flat map of every setting key → string value, ordered
+according to `backend/src/settings/schema.ts`:
+
 {
   "points_per_referral": "100",
   "referral_expiry_days": "30",
   "points_to_thb_rate": "1",
-  "reward_code_length": "8"
+  "reward_code_length": "8",
+  "redemption_expiry_days": "7"
 }
+
+**Errors:** 401 UNAUTHORIZED
 
 ### PATCH /admin/settings
 
-**Request:**
+**Request:** partial map; every value is a string. Unknown keys and
+out-of-range values are rejected (see error codes below).
+
 {
   "points_per_referral": "150"
 }
 
-**Response 200:** updated settings object.
+**Response 200:** full updated settings map (same shape as GET /admin/settings).
 
----
+**Errors:**
+- 401 UNAUTHORIZED
+- 400 UNKNOWN_SETTING_KEY
+- 400 INVALID_TYPE (value cannot be parsed as the key's declared type)
+- 400 OUT_OF_RANGE (parsed value outside the key's min/max)
 
 ## Versioning
 
