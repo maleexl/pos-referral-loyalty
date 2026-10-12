@@ -51,7 +51,7 @@ is out of scope (see DECISIONS.md).
 2. Referee registers with the referrer's code.
 3. System creates a referral with status `PENDING`.
 4. Referral has an expiry date = now + `referral_expiry_days` (from settings).
-5. When the POS records the referee's first visit (via `POST /mock-pos/visits`):
+5. When the POS records the referee's first visit (via `POST /internal/mock-pos/visits`):
    - If referral is `PENDING` and not expired → status becomes `COMPLETED`.
    - If expired → status becomes `EXPIRED`, no points awarded.
    - If already `COMPLETED` → no-op (idempotent).

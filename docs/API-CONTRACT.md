@@ -17,12 +17,13 @@ CALLS: Aligns with docs/SPEC.md (functional reqs) and docs/DECISIONS.md (auth ch
 
 ## Authentication
 
-| Header | Used by | Source |
-|--------|---------|--------|
-| `X-Staff-Key` | Staff endpoints | `.env` (`STAFF_API_KEY`) |
-| `X-Admin-Key` | Admin endpoints | `.env` (`ADMIN_API_KEY`) |
+| Header | Used by | Applies to |
+|--------|---------|------------|
+| `X-Staff-Key` | Staff routes | `/staff/*` (from `.env` `STAFF_API_KEY`) |
+| `X-Admin-Key` | Admin routes | `/admin/*` (from `.env` `ADMIN_API_KEY`) |
+| (none) | Public routes | `/api/*`, `/internal/mock-pos/*` |
 
-Customer endpoints are unauthenticated for the MVP.
+Public (`/api/*`) and internal (`/internal/mock-pos/*`) routes are unauthenticated for the MVP.
 
 ---
 
@@ -111,7 +112,7 @@ Referee registers using referrer's code.
 - 403 SELF_REFERRAL (same email or phone)
 - 409 REFEREE_HAS_REFERRER
 
-### POST /mock-pos/visits
+### POST /internal/mock-pos/visits
 
 Called by POS to record a customer's visit.
 
@@ -169,7 +170,7 @@ List rewards for a customer.
   ]
 }
 
-### POST /api/rewards/redeem
+### POST /staff/redeem
 
 Staff issues a redemption on behalf of the customer.
 
@@ -194,7 +195,7 @@ Staff issues a redemption on behalf of the customer.
 - 400 INSUFFICIENT_POINTS
 - 401 UNAUTHORIZED
 
-### POST /api/rewards/redeem/confirm
+### POST /staff/redeem/confirm
 
 Staff confirms the customer used the redemption code.
 
