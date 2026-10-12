@@ -5,7 +5,7 @@ PURPOSE: Onboarding document for new contributors and team. Gives an
          so a new team can start work without asking the outgoing team.
 READER: Any new team member joining the project. Read top to bottom
         the first time; then use as an index.
-LAST UPDATED: 2026-10-12 @ commit efb3ec5 (Sprint 2 complete, Sprint 3 kickoff).
+LAST UPDATED: 2026-10-12 @ commit 0868201 (Sprint 3 in progress: frontend Customer + Staff, E2E, walkthrough, cheat sheet, README diagrams).
 SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
 -->
 

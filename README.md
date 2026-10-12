@@ -197,4 +197,17 @@ Suggested outline:
 
 ## Status
 
-Sprint 1 — repo skeleton, CI, docs, decisions. Feature code not yet implemented.
+Sprint 3 — in progress. Delivered so far:
+
+- Backend (F1-F4) complete: customer register, referral create + complete,
+  rewards + redemption, admin (referrals / redemptions / settings).
+- Frontend Customer + Staff pages implemented; Admin page is a Sprint 3
+  placeholder.
+- Backend tests: 60 passed + 1 skipped.
+- E2E: one Playwright spec (customer-flow) green in CI.
+- CI: 3 jobs (Backend / Frontend / E2E), all green on main.
+- Docs: SPEC, API-CONTRACT, DECISIONS, HANDOVER, CODE-WALKTHROUGH,
+  QA-CHEATSHEET, plus per-team briefs under the project docs/.
+
+Remaining for Sprint 3: Admin page, deploy to Render (stretch goal),
+final polish.
