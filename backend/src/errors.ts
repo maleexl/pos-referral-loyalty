@@ -3,6 +3,9 @@
  * PURPOSE: Typed error hierarchy for the API. All thrown API errors extend
  *          ApiError so the global error handler can map them to HTTP status
  *          and the standard { error, code } JSON shape from API-CONTRACT.
+ *          Each subclass accepts an optional `code` override so endpoints
+ *          can emit specific codes (e.g. REFERRER_NOT_FOUND, SELF_REFERRAL)
+ *          while defaulting to the generic code from the Standard Errors table.
  * CALLED BY: routes, usecases, middleware, app.ts global error handler.
  * CALLS: (none — pure module, no imports).
  */
@@ -42,43 +45,43 @@ export class ApiError extends Error {
 
 // --- 400 INVALID_INPUT ------------------------------------------------------
 export class ValidationError extends ApiError {
-  constructor(message = 'Validation failed') {
-    super(HTTP_BAD_REQUEST, 'INVALID_INPUT', message);
+  constructor(message = 'Validation failed', code = 'INVALID_INPUT') {
+    super(HTTP_BAD_REQUEST, code, message);
   }
 }
 
 // --- 401 UNAUTHORIZED -------------------------------------------------------
 export class UnauthorizedError extends ApiError {
-  constructor(message = 'Missing or invalid API key') {
-    super(HTTP_UNAUTHORIZED, 'UNAUTHORIZED', message);
+  constructor(message = 'Missing or invalid API key', code = 'UNAUTHORIZED') {
+    super(HTTP_UNAUTHORIZED, code, message);
   }
 }
 
 // --- 403 FORBIDDEN ----------------------------------------------------------
 export class ForbiddenError extends ApiError {
-  constructor(message = 'Forbidden') {
-    super(HTTP_FORBIDDEN, 'FORBIDDEN', message);
+  constructor(message = 'Forbidden', code = 'FORBIDDEN') {
+    super(HTTP_FORBIDDEN, code, message);
   }
 }
 
 // --- 404 NOT_FOUND ----------------------------------------------------------
 export class NotFoundError extends ApiError {
-  constructor(message = 'Not found') {
-    super(HTTP_NOT_FOUND, 'NOT_FOUND', message);
+  constructor(message = 'Not found', code = 'NOT_FOUND') {
+    super(HTTP_NOT_FOUND, code, message);
   }
 }
 
 // --- 409 CONFLICT -----------------------------------------------------------
 export class ConflictError extends ApiError {
-  constructor(message = 'Conflict') {
-    super(HTTP_CONFLICT, 'CONFLICT', message);
+  constructor(message = 'Conflict', code = 'CONFLICT') {
+    super(HTTP_CONFLICT, code, message);
   }
 }
 
 // --- 410 GONE ---------------------------------------------------------------
 export class GoneError extends ApiError {
-  constructor(message = 'Gone') {
-    super(HTTP_GONE, 'GONE', message);
+  constructor(message = 'Gone', code = 'GONE') {
+    super(HTTP_GONE, code, message);
   }
 }
 

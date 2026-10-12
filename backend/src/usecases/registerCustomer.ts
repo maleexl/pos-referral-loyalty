@@ -1,9 +1,11 @@
 /**
  * FILE: backend/src/usecases/registerCustomer.ts
- * PURPOSE: Registers a new Customer with a unique referral code. Validates
- *          input with zod, generates a human-readable code from the name,
- *          and retries on referral-code collision (DB-enforced uniqueness).
- * CALLED BY: backend/src/routes/customers.ts
+ * PURPOSE: Registers a new Customer with a unique referral code. Exports the
+ *          shared createCustomerInTx helper so other usecases (e.g. F2a
+ *          referral creation) can insert a customer inside their own tx with
+ *          identical codegen + collision-retry behavior.
+ * CALLED BY: backend/src/routes/customers.ts,
+ *            backend/src/usecases/createReferral.ts.
  * CALLS: backend/src/db/prisma.ts, backend/src/errors.ts, @prisma/client, zod.
  */
 import { randomInt } from 'node:crypto';
@@ -13,8 +15,6 @@ import { prisma } from '../db/prisma.js';
 import { ConflictError, InternalError } from '../errors.js';
 
 // --- Named constants (no magic numbers) -----------------------------------
-// WHY: all referral-code shape and retry limits are named so they can be
-// audited in one place and referenced from tests without duplication.
 const REFERRAL_CODE_RANDOM_LENGTH = 4;
 const MAX_CODE_RETRY = 5;
 const PREFIX_MAX_LENGTH = 5;
@@ -25,8 +25,7 @@ const MIN_NAME_LENGTH_FOR_PREFIX = 3;
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 const NAME_MAX_LENGTH = 100;
-// WHY: Thai mobile numbers are exactly 10 digits, no spaces/dashes. Anything
-// else is rejected upstream so the DB stores uniform data.
+// WHY: Thai mobile numbers are exactly 10 digits, no spaces/dashes.
 const PHONE_REGEX = /^\d{10}$/;
 
 // --- Referral-code generation ---------------------------------------------
@@ -51,34 +50,49 @@ function generateReferralCode(name: string): string {
 // --- Prisma unique-violation detector -------------------------------------
 // WHY: on P2002 we must distinguish WHICH field collided. Retrying on an
 // email/phone collision would loop forever — those are hard 409s, not retries.
-function isPrismaUniqueViolation(err: unknown, field: string): boolean {
+export function isPrismaUniqueViolation(err: unknown, field: string): boolean {
   if (!(err instanceof Prisma.PrismaClientKnownRequestError)) return false;
   if (err.code !== 'P2002') return false;
-  // Prisma puts the violated column(s) in meta.target (string[] in Postgres).
   const target = err.meta?.target;
   return Array.isArray(target) && target.includes(field);
 }
 
-// --- Input schema ---------------------------------------------------------
+// --- Zod input schema -----------------------------------------------------
 // WHY: single source of truth for input validation. Route passes raw body
 // here; ZodError bubbles up and the global handler maps it to 400 + details.
-const RegisterCustomerInput = z.object({
+export const RegisterCustomerInput = z.object({
   email: z.string().email(),
   phone: z.string().regex(PHONE_REGEX, 'Phone must be 10 digits'),
   name: z.string().min(1).max(NAME_MAX_LENGTH)
 });
 export type RegisterCustomerInput = z.infer<typeof RegisterCustomerInput>;
 
-// --- Usecase --------------------------------------------------------------
-export async function registerCustomer(input: unknown): Promise<Customer> {
-  const data = RegisterCustomerInput.parse(input);
+// --- Shared customer-create helper ----------------------------------------
+// WHY exported: createReferral (F2a) inserts the referee inside its own
+// transaction and must reuse the exact same codegen + retry policy. Passing
+// `tx` in keeps a single source of truth for collision handling, and lets
+// the caller decide the atomicity boundary (its own tx) instead of us
+// imposing one here.
+// WHY: caller-specific codes let one physical operation (create a customer)
+// emit different API-CONTRACT codes depending on the endpoint's context.
+// F1 uses the defaults (CONFLICT); F2a passes REFEREE_*_EXISTS so clients
+// can distinguish "referee email taken" from a generic conflict.
+export interface CustomerCreateErrorCodes {
+  emailExists?: string;
+  phoneExists?: string;
+}
 
+export async function createCustomerInTx(
+  tx: Prisma.TransactionClient,
+  data: RegisterCustomerInput,
+  errorCodes: CustomerCreateErrorCodes = {}
+): Promise<Customer> {
   // WHY: retry on referral-code collisions only. email/phone conflicts are
   // definitive (409) and must not be retried. Attempts are capped so a
   // pathological code-generation bug cannot spin forever.
   for (let attempt = 0; attempt < MAX_CODE_RETRY; attempt++) {
     try {
-      return await prisma.customer.create({
+      return await tx.customer.create({
         data: {
           email: data.email,
           phone: data.phone,
@@ -88,20 +102,26 @@ export async function registerCustomer(input: unknown): Promise<Customer> {
       });
     } catch (err) {
       if (isPrismaUniqueViolation(err, 'email')) {
-        throw new ConflictError('Email already registered');
+        throw new ConflictError('Email already registered', errorCodes.emailExists);
       }
       if (isPrismaUniqueViolation(err, 'phone')) {
-        throw new ConflictError('Phone already registered');
+        throw new ConflictError('Phone already registered', errorCodes.phoneExists);
       }
       if (isPrismaUniqueViolation(err, 'referralCode')) {
-        // WHY: continue → regenerate code on next loop iteration.
+        // continue → regenerate code on next loop iteration
         continue;
       }
       throw err;
     }
   }
-
-  // WHY: only reached when all MAX_CODE_RETRY attempts collided. Treat as a
-  // server-side failure (500) — the client did nothing wrong.
   throw new InternalError('Failed to generate a unique referral code');
+}
+
+// --- Public usecase (F1) --------------------------------------------------
+export async function registerCustomer(input: unknown): Promise<Customer> {
+  const data = RegisterCustomerInput.parse(input);
+  // WHY: pass the PrismaClient as the tx argument. PrismaClient is a
+  // structural superset of Prisma.TransactionClient, so a single-insert path
+  // and a multi-insert tx path share one implementation.
+  return createCustomerInTx(prisma, data);
 }
