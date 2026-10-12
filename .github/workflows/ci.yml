@@ -172,3 +172,179 @@ jobs:
         if: steps.scaffold.outputs.ready == 'true'
         run: npm run build
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    # WHY: E2E must run against code that already passed lint/typecheck/build.
+    # A failure in either upstream job should stop this one instead of wasting
+    # runner minutes on a broken tree.
+    needs: [backend, frontend]
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pos_user
+          POSTGRES_PASSWORD: change_me_local_only
+          POSTGRES_DB: pos_referral_loyalty
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pos_user -d pos_referral_loyalty"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # WHY: same env shape as the backend job — DATABASE_URL points at the
+    # service container, and the three API/seed keys satisfy the fail-fast
+    # checks in staffRoutes / adminRoutes / seed.ts.
+    env:
+      DATABASE_URL: postgresql://pos_user:change_me_local_only@localhost:5432/pos_referral_loyalty?schema=public
+      NODE_ENV: test
+      SEED_ADMIN_KEY: change_me_admin
+      STAFF_API_KEY: test_staff_key
+      ADMIN_API_KEY: test_admin_key
+      E2E_FRONTEND_URL: http://localhost:5173
+      E2E_BACKEND_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # WHY: same scaffold-guard pattern as the other jobs — keeps the job
+      # green if tests/ is ever removed or the checkout is partial.
+      - name: Detect tests scaffold
+        id: scaffold
+        run: |
+          if [ -f tests/package.json ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "tests/package.json not found — skipping E2E steps."
+          fi
+
+      - name: Setup Node 20
+        if: steps.scaffold.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # WHY: multiline path — setup-node keys the cache on all three
+          # lockfiles, so a change in any of them invalidates the shared cache.
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            tests/package-lock.json
+
+      - name: Install backend dependencies
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Apply migrations
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: backend
+        run: npx prisma migrate deploy
+
+      - name: Seed database
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: backend
+        run: npx prisma db seed
+
+      - name: Install frontend dependencies
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: frontend
+        run: npm ci
+
+      # WHY: frontend/src/lib/api.ts throws at module-init if VITE_API_URL
+      # is unset — the React tree would never mount and every E2E assertion
+      # would fail with a blank #root. Create the file BEFORE starting Vite.
+      - name: Create frontend/.env
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: frontend
+        run: |
+          echo "VITE_APP_ENV=test" > .env
+          echo "VITE_API_URL=http://localhost:3000" >> .env
+          echo "--- frontend/.env ---"
+          cat .env
+
+      - name: Install tests dependencies
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: tests
+        run: npm ci
+
+      # WHY --with-deps: installs the OS libraries Chromium needs (GTK, NSS,
+      # etc.). Without it, launch fails on the ubuntu-latest runner.
+      - name: Install Playwright browser
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: tests
+        run: npx playwright install --with-deps chromium
+
+      # WHY background + log-to-file: we need both servers alive for the
+      # duration of the test run, and we want the logs on failure. GH Actions
+      # kills the whole process group when the job ends, so no cleanup is
+      # required.
+      - name: Start backend (background)
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: backend
+        run: |
+          npm run dev > /tmp/backend.log 2>&1 &
+          echo $! > /tmp/backend.pid
+
+      - name: Start frontend (background)
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: frontend
+        run: |
+          npm run dev > /tmp/frontend.log 2>&1 &
+          echo $! > /tmp/frontend.pid
+
+      - name: Wait for backend :3000/health
+        if: steps.scaffold.outputs.ready == 'true'
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000/health > /dev/null; then
+              echo "backend ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "backend never became ready — dumping log:"
+          cat /tmp/backend.log
+          exit 1
+
+      - name: Wait for frontend :5173
+        if: steps.scaffold.outputs.ready == 'true'
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:5173 > /dev/null; then
+              echo "frontend ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "frontend never became ready — dumping log:"
+          cat /tmp/frontend.log
+          exit 1
+
+      - name: Run Playwright
+        if: steps.scaffold.outputs.ready == 'true'
+        working-directory: tests
+        run: npx playwright test --config=e2e/playwright.config.ts
+
+      # WHY if-no-files-found: ignore — a passing run produces no report
+      # directory; upload-artifact would otherwise fail the step.
+      - name: Upload Playwright report on failure
+        if: failure() && steps.scaffold.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: tests/e2e/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
