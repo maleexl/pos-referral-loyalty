@@ -112,6 +112,47 @@ Referee registers using referrer's code.
 - 403 SELF_REFERRAL (same email or phone)
 - 409 REFEREE_HAS_REFERRER
 
+### GET /api/customers/:referralCode/referrals
+
+List referrals where the given referral code is the referrer.
+
+**Auth:** none (public read-only, same class as GET /api/customers/:code
+and GET /api/customers/:code/rewards — the referralCode itself is the
+capability token; see DECISIONS #5).
+
+**Response 200:**
+{
+  "items": [
+    {
+      "id": "uuid",
+      "status": "PENDING" | "COMPLETED" | "EXPIRED",
+      "createdAt": "2026-10-12T10:00:00Z",
+      "completedAt": "2026-10-12T11:00:00Z" | null,
+      "referee": {
+        "id": "uuid",
+        "name": "Bob",
+        "referralCode": "BOB456"
+      }
+    }
+  ]
+}
+
+**Errors:**
+- 404 NOT_FOUND (referralCode unknown)
+
+A known customer with no referrals returns 200 with an empty array:
+{
+  "items": []
+}
+
+**Notes:**
+- No pagination — a single customer's referral set is bounded; adding
+  page/limit would be a contract change requiring a coordinated update.
+- No referrer fields in the response — the caller already owns the
+  referral code, so repeating their own identity per row is noise.
+- No `expiresAt` on items — the customer-facing UI does not surface the
+  deadline; admin endpoints expose it.
+
 ### POST /internal/mock-pos/visits
 
 Called by POS to record a customer's visit.
