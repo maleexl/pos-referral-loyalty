@@ -12,6 +12,7 @@ import { ZodError } from 'zod';
 import { ApiError } from './errors.js';
 import { customerRoutes } from './routes/customers.js';
 import { referralRoutes } from './routes/referrals.js';
+import { internalRoutes } from './routes/internal.js';
 
 export interface BuildAppOptions {
   /**
@@ -46,7 +47,10 @@ export async function buildApp(
     if (err instanceof ApiError) {
       // WHY: prefer err.message over err.name — messages are user-facing,
       // names are class identifiers (ConflictError etc.).
+      // WHY: spread err.details FIRST so it cannot override error/code —
+      // callers may pass visit info (F2b 409) but never touch the envelope.
       reply.status(err.statusCode).send({
+        ...(err.details && typeof err.details === 'object' ? err.details : {}),
         error: err.message,
         code: err.code
       });
@@ -109,6 +113,7 @@ export async function buildApp(
   // encapsulated. Order matters only for wildcard routes — none here yet.
   await app.register(customerRoutes);
   await app.register(referralRoutes);
+  await app.register(internalRoutes);
 
   return app;
 }

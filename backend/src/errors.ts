@@ -30,7 +30,11 @@ export class ApiError extends Error {
   constructor(
     public readonly statusCode: number,
     public readonly code: string,
-    message: string
+    message: string,
+    // WHY: optional structured payload (e.g. F2b 409 includes visitId so the
+    // client knows the visit was recorded even though the referral was not
+    // completed). Merged into the response body by the global error handler.
+    public readonly details?: unknown
   ) {
     super(message);
     // WHY: `name` helps with logs (pino) and stack traces read as
@@ -45,43 +49,43 @@ export class ApiError extends Error {
 
 // --- 400 INVALID_INPUT ------------------------------------------------------
 export class ValidationError extends ApiError {
-  constructor(message = 'Validation failed', code = 'INVALID_INPUT') {
-    super(HTTP_BAD_REQUEST, code, message);
+  constructor(message = 'Validation failed', code = 'INVALID_INPUT', details?: unknown) {
+    super(HTTP_BAD_REQUEST, code, message, details);
   }
 }
 
 // --- 401 UNAUTHORIZED -------------------------------------------------------
 export class UnauthorizedError extends ApiError {
-  constructor(message = 'Missing or invalid API key', code = 'UNAUTHORIZED') {
-    super(HTTP_UNAUTHORIZED, code, message);
+  constructor(message = 'Missing or invalid API key', code = 'UNAUTHORIZED', details?: unknown) {
+    super(HTTP_UNAUTHORIZED, code, message, details);
   }
 }
 
 // --- 403 FORBIDDEN ----------------------------------------------------------
 export class ForbiddenError extends ApiError {
-  constructor(message = 'Forbidden', code = 'FORBIDDEN') {
-    super(HTTP_FORBIDDEN, code, message);
+  constructor(message = 'Forbidden', code = 'FORBIDDEN', details?: unknown) {
+    super(HTTP_FORBIDDEN, code, message, details);
   }
 }
 
 // --- 404 NOT_FOUND ----------------------------------------------------------
 export class NotFoundError extends ApiError {
-  constructor(message = 'Not found', code = 'NOT_FOUND') {
-    super(HTTP_NOT_FOUND, code, message);
+  constructor(message = 'Not found', code = 'NOT_FOUND', details?: unknown) {
+    super(HTTP_NOT_FOUND, code, message, details);
   }
 }
 
 // --- 409 CONFLICT -----------------------------------------------------------
 export class ConflictError extends ApiError {
-  constructor(message = 'Conflict', code = 'CONFLICT') {
-    super(HTTP_CONFLICT, code, message);
+  constructor(message = 'Conflict', code = 'CONFLICT', details?: unknown) {
+    super(HTTP_CONFLICT, code, message, details);
   }
 }
 
 // --- 410 GONE ---------------------------------------------------------------
 export class GoneError extends ApiError {
-  constructor(message = 'Gone', code = 'GONE') {
-    super(HTTP_GONE, code, message);
+  constructor(message = 'Gone', code = 'GONE', details?: unknown) {
+    super(HTTP_GONE, code, message, details);
   }
 }
 
@@ -90,7 +94,7 @@ export class GoneError extends ApiError {
 // specific message in dev. In prod the handler will still strip details
 // unless NODE_ENV=development (see app.ts — STEP 3.3).
 export class InternalError extends ApiError {
-  constructor(message = 'Internal server error') {
-    super(HTTP_INTERNAL, 'INTERNAL', message);
+  constructor(message = 'Internal server error', code = 'INTERNAL', details?: unknown) {
+    super(HTTP_INTERNAL, code, message, details);
   }
 }

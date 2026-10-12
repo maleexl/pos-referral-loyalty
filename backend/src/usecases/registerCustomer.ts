@@ -50,11 +50,20 @@ function generateReferralCode(name: string): string {
 // --- Prisma unique-violation detector -------------------------------------
 // WHY: on P2002 we must distinguish WHICH field collided. Retrying on an
 // email/phone collision would loop forever — those are hard 409s, not retries.
-export function isPrismaUniqueViolation(err: unknown, field: string): boolean {
+// WHY: accepts a single field OR a composite key (e.g. ['referralId','type'])
+// because Prisma reports composite unique violations as a field array in
+// meta.target. All requested fields must be present for a match — that keeps
+// the check strict when callers want to distinguish referrals from rewards.
+export function isPrismaUniqueViolation(
+  err: unknown,
+  fields: string | readonly string[]
+): boolean {
   if (!(err instanceof Prisma.PrismaClientKnownRequestError)) return false;
   if (err.code !== 'P2002') return false;
   const target = err.meta?.target;
-  return Array.isArray(target) && target.includes(field);
+  if (!Array.isArray(target)) return false;
+  const wanted = Array.isArray(fields) ? fields : [fields];
+  return wanted.every((f) => target.includes(f));
 }
 
 // --- Zod input schema -----------------------------------------------------
