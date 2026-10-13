@@ -75,3 +75,35 @@ export function clearStoredStaffKey(): void {
     // 401 will catch and clear again. Self-healing, no user impact.
   }
 }
+
+// WHY: admin key is operator-entered, per-browser, and never baked into
+// the bundle — see docs/DECISIONS.md #5. Same pattern as the staff key
+// above; kept as a separate namespace so a 401 on /staff/* does not log
+// the operator out of /admin/*.
+export const ADMIN_KEY_STORAGE_KEY = 'pos-referral-loyalty.admin.key';
+
+export function getStoredAdminKey(): string | null {
+  try {
+    return window.localStorage.getItem(ADMIN_KEY_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredAdminKey(key: string): void {
+  try {
+    window.localStorage.setItem(ADMIN_KEY_STORAGE_KEY, key);
+  } catch {
+    // WHY: silent — the caller already has the key in memory for this
+    // session. Losing the cache just means re-entry next reload.
+  }
+}
+
+export function clearStoredAdminKey(): void {
+  try {
+    window.localStorage.removeItem(ADMIN_KEY_STORAGE_KEY);
+  } catch {
+    // WHY: best-effort — a failed clear leaves a stale key that the next
+    // 401 will catch and clear again. Self-healing, no user impact.
+  }
+}
