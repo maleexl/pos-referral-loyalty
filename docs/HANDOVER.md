@@ -5,7 +5,7 @@ PURPOSE: Onboarding document for new contributors and team. Gives an
          so a new team can start work without asking the outgoing team.
 READER: Any new team member joining the project. Read top to bottom
         the first time; then use as an index.
-LAST UPDATED: 2026-10-12 @ commit 0868201 (Sprint 3 in progress: frontend Customer + Staff, E2E, walkthrough, cheat sheet, README diagrams).
+LAST UPDATED: 2026-10-13 @ commit ae8a91a (Sprint 3: all three frontend pages implemented; Admin page landed).
 SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
 -->
 
@@ -13,16 +13,19 @@ SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
 
 ## 1. Project state snapshot
 
-- **Sprint:** Sprint 2 complete. Sprint 3 just kicked off.
+- **Sprint:** Sprint 3 in progress. Backend (F1-F4) and all three
+  frontend pages are implemented; deploy is the remaining stretch goal.
 - **Features complete (backend):** F1 register, F2a referral create,
   F2b POS visit completion, F3 rewards + redemption, F4 admin.
-- **Features complete (frontend):** scaffold only — routing, layout,
-  transport hooks. UI pages are Sprint 3 work.
-- **Tests:** 60 passing + 1 skipped (backend, vitest). 0 E2E (Playwright
-  planned for Sprint 3).
-- **CI:** 2 jobs (Backend, Frontend), both green on main.
-- **Sprint 2 commits:** `7242ef9` (skeleton) → `efb3ec5` (customers
-  referrals endpoint). See `git log --oneline` for the full trail.
+- **Features complete (frontend):** all three pages — Customer
+  (register + referral + invite), Staff (key + lookup + redeem +
+  confirm), Admin (key + referrals table + redemptions table +
+  settings editor).
+- **Tests:** 60 passing + 1 skipped (backend, vitest). 1 E2E
+  (Playwright customer-flow), green in CI.
+- **CI:** 3 jobs (Backend, Frontend, E2E), all green on main.
+- **Sprint 3 commits:** `efb3ec5` (referrals endpoint) → `ae8a91a`
+  (frontend Admin page). See `git log --oneline` for the full trail.
 
 ## 2. Architecture at a glance
 

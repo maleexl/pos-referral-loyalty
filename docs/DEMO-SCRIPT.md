@@ -162,63 +162,50 @@ Terminal 3 — Frontend (Vite :5173):
 
 (§3 Admin + §4 API Tour + §5 5-min flow + §6 Known limitations + §7 Q&A — chunk ถัดไป)
 
-## §3 Admin page — via curl (UI ยัง placeholder)
+## §3 Admin page — key prompt → referrals → redemptions → settings
 
-**หมายเหตุ:** Admin page ใน Sprint 3 ยังเป็น placeholder — หน้าจอไม่แสดง
-อะไร เพื่อไม่ให้ demo สะดุด เราจะสาธิต admin layer ผ่าน curl โดยตรง
-(ทุก endpoint ตรงกับ API-CONTRACT §F4)
+**หน้า:** http://localhost:5173/admin
 
-**ค่าเริ่มต้น:** `ADMIN_API_KEY=change_me_admin` (จาก `backend/.env`)
+**ทำ 3.0 — คลิก Admin ใน nav**
 
-**ทำ 3.0 — แสดง admin key ผ่าน PowerShell/WSL**
+- **เห็น:** admin-key prompt (form 1 input + submit)
+- **พูด:** "Admin layer ใช้ API key แยกจาก staff — คนละ scope คนละ header enforce ที่ Fastify plugin scope ต่างกัน"
 
-    export ADMIN_KEY=change_me_admin
+**ทำ 3.1 — กรอก admin key → กด Submit**
 
-- **พูด:** "Admin layer ใช้ API key แยกจาก staff — คนละ scope คนละ header enforce ที่ plugin scope ของ Fastify"
+ค่า default: `change_me_admin` (จาก `backend/.env`)
 
-**ทำ 3.1 — GET /admin/referrals (list)**
+- **เห็น:** prompt หายไป ปรากฏ 3 sections เรียงลงมา: referrals table → redemptions table → settings editor
+- **พูด:** "key validate ผ่าน X-Admin-Key บน endpoint จริง — 401 ตัวไหนก็ตามจะ clear storage แล้วกลับมา prompt เดิม"
 
-    curl -s -H "X-Admin-Key: $ADMIN_KEY" \
-      "http://localhost:3000/admin/referrals?limit=5" | python3 -m json.tool
+**ทำ 3.2 — ดู referrals table**
 
-- **เห็น:** `total` + `page` + `limit` + `items[]` — แต่ละ item มี referrer + referee + status
-- **พูด:** "Admin เห็น referral ทั้งระบบ พร้อม filter by status และ pagination — เราเห็น referral ของ Alice ที่เพิ่งสร้างไปใน §1"
+- **เห็น:** table + status filter dropdown + pagination (prev/next)
+- **พูด:** "Server-side filter + pagination — query ส่ง status/page/limit ไปให้ backend ไม่โหลดทั้ง DB"
 
-**ทำ 3.2 — GET /admin/redemptions**
+**ทำ 3.3 — เลือก filter status=COMPLETED**
 
-    curl -s -H "X-Admin-Key: $ADMIN_KEY" \
-      "http://localhost:3000/admin/redemptions?limit=5" | python3 -m json.tool
+- **เห็น:** rows filter เหลือเฉพาะ referral ที่ COMPLETED (referral Alice→Bob จาก §1 อยู่ในนี้)
+- **พูด:** "state machine ของ referral — PENDING / COMPLETED / EXPIRED — filter ทำงานที่ backend"
 
-- **เห็น:** redemption row ที่เพิ่ง confirm ใน §2 (status=REDEEMED, points ติดลบ)
-- **พูด:** "Ledger กลับมาเป็น signed points — earn เป็นบวก, redeem เป็นลบ balance คือผลรวม"
+**ทำ 3.4 — ดู redemptions table**
 
-**ทำ 3.3 — GET /admin/settings**
+- **เห็น:** table + pagination แสดง redemption ที่ confirm ใน §2 (status REDEEMED, points ติดลบ)
+- **พูด:** "redemptions เป็น view ของ reward table ที่ type=REDEMPTION — signed points เก็บ earn/redeem ในตารางเดียว"
 
-    curl -s -H "X-Admin-Key: $ADMIN_KEY" \
-      http://localhost:3000/admin/settings | python3 -m json.tool
+**ทำ 3.5 — Settings editor — แก้ `points_per_referral` → 150 → กด Save**
 
-- **เห็น:** 5 keys (points_per_referral, referral_expiry_days, redemption_expiry_days, reward_code_length, points_to_thb_rate)
-- **พูด:** "ทุก business value อยู่ใน DB — operator แก้ได้โดยไม่ต้อง redeploy"
+- **เห็น:** success message, ค่าใน row เปลี่ยนเป็น 150
+- **พูด:** "Settings มาจาก DB — admin แก้ได้ runtime, backend invalidate cache หลัง commit request ถัดไปเห็นค่าใหม่ทันที"
 
-**ทำ 3.4 — PATCH /admin/settings (เปลี่ยน points_per_referral)**
+**ทำ 3.6 — ทดสอบ invalid input: ใส่ `abc` ใน `points_per_referral` → กด Save**
 
-    curl -s -X PATCH -H "X-Admin-Key: $ADMIN_KEY" \
-      -H "Content-Type: application/json" \
-      -d '{"points_per_referral":"150"}' \
-      http://localhost:3000/admin/settings | python3 -m json.tool
+- **เห็น:** error banner "INVALID_TYPE" (หรือข้อความที่ backend ส่ง)
+- **พูด:** "Backend validate type + bounds ตาม schema — ไม่เชื่อ client ถ้าค่าไม่ parse เป็น int จะได้ 400 INVALID_TYPE"
 
-- **เห็น:** response มี `points_per_referral: "150"` (และ keys อื่นครบ)
-- **พูด:** "settings loader invalidate cache หลัง commit — request ถัดไปเห็นค่าใหม่ทันที ไม่ต้องรอ TTL"
+**ผู้ชมควรเห็น:** หน้า Admin ครบ 3 sections — key prompt + 2 tables + settings editor พร้อม valid + invalid paths — ใน ~90 วินาที
 
-**ทำ 3.5 — ยืนยันค่าถูกใช้จริง: GET /admin/settings อีกครั้ง**
-
-    curl -s -H "X-Admin-Key: $ADMIN_KEY" \
-      http://localhost:3000/admin/settings | python3 -m json.tool | grep points_per_referral
-
-- **เห็น:** `"points_per_referral": "150"`
-- **พูด:** "confirm ว่า cache invalidate ทำงานจริง — ค่าใหม่ propagate ทันที"
-
-**ผู้ชมควรเห็น:** admin layer ทำงานครบทั้ง 4 endpoints ใน ~60 วินาที
+**หมายเหตุ:** Settings ที่แก้ในขั้น 3.5 จะมีผลกับ demo ต่อๆ ไป — ถ้าอยากคืนค่าเดิม กด Save กลับเป็น 100 (หรือ reload จาก seed)
 
 ---
 
