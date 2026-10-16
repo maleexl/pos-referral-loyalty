@@ -1,10 +1,12 @@
 /**
  * FILE: backend/src/constants.ts
- * PURPOSE: Central enum-like constants for domain statuses. Re-exports
- *          Prisma's generated enums under SCREAMING_SNAKE aliases so internal
- *          code and tests read consistently without duplicating the literal
- *          values (which would drift from the DB schema).
- * CALLED BY: usecases (recordPosVisit, createReferral), routes, tests.
+ * PURPOSE: Central enum-like constants for domain statuses plus shared input
+ *          limits and time constants. Re-exports Prisma's generated enums under
+ *          SCREAMING_SNAKE aliases so internal code and tests read consistently
+ *          without duplicating the literal values (which would drift from the
+ *          DB schema).
+ * CALLED BY: usecases (recordPosVisit, createReferral, issueRedemption,
+ *            registerCustomer), routes, tests.
  * CALLS: @prisma/client (generated enums).
  */
 import {
@@ -28,3 +30,16 @@ export type {
   RewardType,
   RewardStatus
 };
+
+// --- Shared input limits --------------------------------------------------
+// WHY: F1 (registerCustomer) and F2a (createReferral) validate the same name
+// and phone fields. A single definition keeps the 400 details identical and
+// stops the two boundaries from drifting apart.
+export const NAME_MAX_LENGTH = 100;
+// WHY: Thai mobile numbers are exactly 10 digits, no spaces/dashes.
+export const PHONE_REGEX = /^\d{10}$/;
+
+// --- Shared time constants ------------------------------------------------
+// WHY: used by both referral-expiry (createReferral) and redemption-expiry
+// (issueRedemption) snapshots. One value keeps the two deadlines comparable.
+export const MS_PER_DAY = 24 * 60 * 60 * 1000;

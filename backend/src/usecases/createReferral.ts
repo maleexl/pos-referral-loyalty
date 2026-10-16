@@ -8,7 +8,7 @@
  *        backend/src/usecases/registerCustomer.ts, backend/src/errors.ts,
  *        @prisma/client, zod.
  */
-import { ReferralStatus, type Prisma } from '@prisma/client';
+import { ReferralStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db/prisma.js';
 import { settings } from '../settings/loader.js';
@@ -21,15 +21,17 @@ import {
   ForbiddenError,
   NotFoundError
 } from '../errors.js';
+import {
+  MS_PER_DAY,
+  NAME_MAX_LENGTH,
+  PHONE_REGEX
+} from '../constants.js';
 
 // --- Named constants ------------------------------------------------------
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // WHY: matches the format generateReferralCode produces (prefix 3-5 + 4 random).
 // The wider bound (6-10) is deliberately permissive — API clients should not
 // have to replicate our exact length rules.
 const REFERRER_CODE_REGEX = /^[A-Z0-9]{6,10}$/;
-const NAME_MAX_LENGTH = 100;
-const PHONE_REGEX = /^\d{10}$/;
 
 // --- API-CONTRACT F2 error codes ------------------------------------------
 // WHY: exported as named constants — routes/tests reference the same strings,
@@ -191,8 +193,3 @@ export async function createReferral(
     }
   });
 }
-
-// WHY: re-export the Prisma type so future callers do not need a second import
-// from @prisma/client just to type the tx. Unused today, but keeps the
-// public surface stable if the impl moves.
-export type { Prisma };

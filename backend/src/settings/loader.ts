@@ -52,7 +52,7 @@ function isFresh(): boolean {
 }
 
 async function loadAll(): Promise<Map<string, string>> {
-  // WHY: read the entire table — settings is tiny (currently 4 rows) and this
+  // WHY: read the entire table — settings is tiny (currently 5 rows) and this
   // avoids a second roundtrip when a usecase reads several keys at once.
   const rows = await prisma.setting.findMany({
     select: { key: true, value: true }
@@ -171,7 +171,16 @@ export const settings = {
       .filter((k) => !knownKeys.has(k))
       .sort();
     for (const k of orphans) {
-      ordered[k] = values.get(k) as string;
+      const value = values.get(k);
+      if (value === undefined) {
+        // WHY: unreachable — k came from values.keys() — but Map.get() is
+        // typed string | undefined, and a silent cast would hide a future
+        // refactor that breaks the orphan scan (AUD-014).
+        throw new InternalError(
+          `Setting "${k}" missing during orphan ordering`
+        );
+      }
+      ordered[k] = value;
     }
     return ordered;
   }

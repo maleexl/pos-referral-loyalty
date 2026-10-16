@@ -3,8 +3,11 @@
  * PURPOSE: Builds and returns the Fastify application instance with plugins,
  *          routes, and global error handling wired up. Pure builder — this
  *          module never calls listen(), so tests can exercise it via inject().
- * CALLED BY: backend/src/server.ts (runtime), tests (health.test.ts, settings.test.ts).
- * CALLS: fastify, @fastify/cors, zod, backend/src/errors.ts.
+ * CALLED BY: backend/src/server.ts (runtime), all backend test suites
+ *            (health, customers, referrals, admin, rewards, settings,
+ *            pos-visits, customer-referrals) via inject().
+ * CALLS: fastify, @fastify/cors, zod, backend/src/errors.ts,
+ *        backend/src/routes/* (customers, referrals, internal, staff, admin).
  */
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';

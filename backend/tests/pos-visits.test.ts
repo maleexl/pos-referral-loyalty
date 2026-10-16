@@ -3,7 +3,8 @@
  * PURPOSE: Integration tests for POST /internal/mock-pos/visits. Verifies the
  *          full referral-completion flow: no-referral path, PENDING → COMPLETED
  *          with reward creation, COMPLETED idempotency, EXPIRED path,
- *          customer-not-found, atomic rollback, and balance formula (BR-3/5).
+ *          customer-not-found, atomic rollback, balance formula (BR-3/5), and
+ *          the concurrent-completion race (exactly one winner — AUD-010).
  * CALLED BY: vitest (npm test).
  * CALLS: backend/src/app.ts, backend/src/db/prisma.ts, backend/src/settings/loader.ts.
  *
@@ -303,12 +304,69 @@ describe('POST /internal/mock-pos/visits', () => {
     expect(agg._sum.points).toBe(expectedPoints);
   });
 
-  // WHY skipped: `app.inject()` runs through the Fastify router synchronously
-  // inside the Node event loop, so two parallel calls never interleave at the
-  // DB read/write boundary — the race this test would exercise cannot occur
-  // in-process. A real race test needs parallel network clients against a
-  // listening server; that belongs in Sprint 3 E2E, not here.
-  it.skip('race: two parallel visits → exactly one completion', async () => {
-    // Placeholder — see comment above.
+  // WHY: `Promise.all(inject, inject)` starts both requests before either
+  // awaits its first DB roundtrip, so their transactions overlap on the same
+  // referral. The optimistic lock (updateMany WHERE status=PENDING) plus the
+  // UNIQUE(referralId, type) reward constraint must let exactly one win; the
+  // loser gets the documented 409 REFERRAL_ALREADY_COMPLETED (AUD-010).
+  it('race: two parallel visits → exactly one completion', async () => {
+    const referrer = await createCustomerViaApi(app, 'race-referrer', 12, 'Race Referrer');
+    const refRes = await app.inject({
+      method: 'POST',
+      url: '/api/referrals',
+      payload: {
+        referrerCode: referrer.referralCode,
+        refereeEmail: testEmail('race-referee'),
+        refereePhone: testPhone(13),
+        refereeName: 'Race Referee'
+      }
+    });
+    expect(refRes.statusCode).toBe(201);
+    const referralId = refRes.json().referralId as string;
+    const expectedPoints = await settings.getPointsPerReferral();
+
+    const [a, b] = await Promise.all([
+      postVisit(app, testEmail('race-referee'), 100),
+      postVisit(app, testEmail('race-referee'), 100)
+    ]);
+
+    // Exactly one success (200) and one documented conflict (409).
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
+
+    const winner = a.status === 200 ? a : b;
+    const loser = a.status === 200 ? b : a;
+    expect(winner.body).toMatchObject({
+      referralCompleted: true,
+      pointsAwarded: expectedPoints,
+      referrerCode: referrer.referralCode
+    });
+    expect(loser.body).toMatchObject({
+      code: 'REFERRAL_ALREADY_COMPLETED',
+      referralCompleted: false,
+      pointsAwarded: 0
+    });
+
+    // Points awarded exactly once: one ledger row, balance == points_per_referral.
+    const rewards = await prisma.reward.findMany({ where: { referralId } });
+    expect(rewards).toHaveLength(1);
+    expect(rewards[0]).toMatchObject({
+      type: 'REFERRAL_BONUS',
+      points: expectedPoints,
+      customerId: referrer.id
+    });
+    const agg = await prisma.reward.aggregate({
+      where: { customerId: referrer.id },
+      _sum: { points: true }
+    });
+    expect(agg._sum.points).toBe(expectedPoints);
+
+    // Both visits still recorded — the visit write precedes completion (F2b).
+    const visitCount = await prisma.posVisit.count({
+      where: { customer: { email: testEmail('race-referee') } }
+    });
+    expect(visitCount).toBe(2);
+
+    const after = await prisma.referral.findUnique({ where: { id: referralId } });
+    expect(after?.status).toBe('COMPLETED');
   });
 });

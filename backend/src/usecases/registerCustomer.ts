@@ -13,6 +13,7 @@ import { Prisma, type Customer } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db/prisma.js';
 import { ConflictError, InternalError } from '../errors.js';
+import { NAME_MAX_LENGTH, PHONE_REGEX } from '../constants.js';
 
 // --- Named constants (no magic numbers) -----------------------------------
 const REFERRAL_CODE_RANDOM_LENGTH = 4;
@@ -23,10 +24,6 @@ const MIN_NAME_LENGTH_FOR_PREFIX = 3;
 // WHY: uppercase A-Z + digits — human-readable. Intentionally kept simple;
 // excluding look-alikes (0/O, 1/I) can come later if ops asks.
 const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
-const NAME_MAX_LENGTH = 100;
-// WHY: Thai mobile numbers are exactly 10 digits, no spaces/dashes.
-const PHONE_REGEX = /^\d{10}$/;
 
 // --- API-CONTRACT F1 error codes ------------------------------------------
 // WHY: named constants — the route/tests reference the same strings, and a

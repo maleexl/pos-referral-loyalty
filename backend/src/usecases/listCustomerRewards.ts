@@ -6,13 +6,12 @@
  * CALLED BY: backend/src/routes/customers.ts
  * CALLS: backend/src/db/prisma.ts, backend/src/errors.ts, backend/src/constants.ts.
  */
-import type { Customer, Prisma, Reward } from '@prisma/client';
+import type { Prisma, Reward } from '@prisma/client';
 import { prisma } from '../db/prisma.js';
 import { NotFoundError } from '../errors.js';
 import { REWARD_STATUS } from '../constants.js';
 
 export interface ListCustomerRewardsResult {
-  customer: Customer;
   pointsBalance: number;
   rewards: Reward[];
 }
@@ -58,5 +57,5 @@ export async function listCustomerRewards(
     orderBy: { createdAt: 'desc' }
   });
 
-  return { customer, pointsBalance, rewards };
+  return { pointsBalance, rewards };
 }

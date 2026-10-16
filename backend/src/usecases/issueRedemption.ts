@@ -23,12 +23,12 @@ import {
 import { isPrismaUniqueViolation } from './registerCustomer.js';
 import { computePointsBalance } from './listCustomerRewards.js';
 import {
+  MS_PER_DAY,
   REWARD_STATUS,
   REWARD_TYPE
 } from '../constants.js';
 
 // --- Named constants ------------------------------------------------------
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // WHY: same retry budget as referral-code generation — collisions are rare,
 // and a bounded loop keeps a pathological charset/length misconfig from
 // spinning forever.
@@ -196,12 +196,20 @@ export async function issueRedemption(
     try {
       const { reward, currentBalance } = await withSerializableRetry(issueInTx);
 
-      // Non-null assertions are safe here — we just set both fields.
+      // WHY: both fields are written in the create() call above, so a null here
+      // means the row was mutated or the schema drifted — a server fault, not
+      // a client one. Narrow with a runtime check and fail loudly instead of
+      // casting null to a non-null type (AUD-014).
+      if (reward.redemptionCode === null || reward.expiresAt === null) {
+        throw new InternalError(
+          'Redemption row is missing redemptionCode or expiresAt'
+        );
+      }
       return {
-        redemptionCode: reward.redemptionCode as string,
+        redemptionCode: reward.redemptionCode,
         pointsUsed: data.points,
         pointsRemaining: currentBalance - data.points,
-        expiresAt: reward.expiresAt as Date
+        expiresAt: reward.expiresAt
       };
     } catch (err) {
       // WHY: redemptionCode is @unique at DB level — the retry loop catches

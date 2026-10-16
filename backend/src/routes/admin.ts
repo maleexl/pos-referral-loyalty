@@ -9,34 +9,25 @@
  *        backend/src/usecases/listRedemptions.ts,
  *        backend/src/usecases/getAllSettings.ts,
  *        backend/src/usecases/updateSettings.ts,
- *        backend/src/errors.ts.
+ *        backend/src/auth/apiKey.ts, backend/src/errors.ts.
  */
 import type { FastifyInstance } from 'fastify';
-import { InternalError, UnauthorizedError } from '../errors.js';
+import { UnauthorizedError } from '../errors.js';
+import { readApiKey, isValidApiKey } from '../auth/apiKey.js';
 import { listReferrals } from '../usecases/listReferrals.js';
 import { listRedemptions } from '../usecases/listRedemptions.js';
 import { getAllSettings } from '../usecases/getAllSettings.js';
 import { updateSettings } from '../usecases/updateSettings.js';
 
-// WHY: read once at plugin registration — same pattern as staffRoutes. If the
-// key is missing, fail startup rather than accept an empty header match.
-function readAdminKey(): string {
-  const key = process.env.ADMIN_API_KEY;
-  if (!key || key.length === 0) {
-    throw new InternalError('ADMIN_API_KEY is not configured');
-  }
-  return key;
-}
-
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
-  const expectedKey = readAdminKey();
+  const expectedKey = readApiKey('ADMIN_API_KEY');
 
   // WHY plugin-scoped onRequest: runs before body parsing on every route in
   // this file only. Removing this plugin unregisters the routes AND the auth
   // in one move — no risk of a global hook accidentally gating public paths.
   app.addHook('onRequest', async (req) => {
-    const provided = req.headers['x-admin-key'];
-    if (typeof provided !== 'string' || provided !== expectedKey) {
+    // WHY: shared helper — constant-time compare + type guard (rejects arrays).
+    if (!isValidApiKey(req.headers['x-admin-key'], expectedKey)) {
       throw new UnauthorizedError('Invalid or missing admin key');
     }
   });
