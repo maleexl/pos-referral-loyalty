@@ -285,6 +285,16 @@ jobs:
         working-directory: tests
         run: npm ci
 
+      # WHY: cache the downloaded Chromium binary, keyed on the tests lockfile
+      # so a version bump invalidates it. --with-deps below still installs the
+      # OS libraries, which are not cached.
+      - name: Cache Playwright browsers
+        if: steps.scaffold.outputs.ready == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('tests/package-lock.json') }}
+
       # WHY --with-deps: installs the OS libraries Chromium needs (GTK, NSS,
       # etc.). Without it, launch fails on the ubuntu-latest runner.
       - name: Install Playwright browser
