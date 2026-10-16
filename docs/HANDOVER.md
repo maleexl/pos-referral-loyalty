@@ -21,7 +21,7 @@ SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
   (register + referral + invite), Staff (key + lookup + redeem +
   confirm), Admin (key + referrals table + redemptions table +
   settings editor).
-- **Tests:** 66 passing + 1 skipped (backend, vitest, 8 files). 2 E2E specs
+- **Tests:** 67 passing (backend, vitest, 8 files). 2 E2E specs
   (Playwright customer-flow + staff-flow), green in CI.
 - **CI:** 3 jobs (Backend, Frontend, E2E), all green on main.
 - **Sprint 3 commits:** `efb3ec5` (referrals endpoint) → `ae8a91a`

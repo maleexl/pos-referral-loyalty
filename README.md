@@ -158,9 +158,9 @@ Copy the templates and fill in local values. Never commit real .env files.
 
 ### 4. Tests
 
-    cd backend && npm test         # Vitest — 66 passed + 1 skipped
+    cd backend && npm test         # Vitest — 67 passed (8 files)
     cd frontend && npm run lint    # no frontend unit tests; CI runs lint + typecheck + build
-    cd tests && npm test           # E2E — customer-flow + staff-flow (servers must be running)
+    cd tests && npm test           # E2E — customer-flow + staff-flow (webServer auto-starts the servers)
 
 ---
 
@@ -204,7 +204,7 @@ Sprint 3 — in progress. Delivered so far:
   rewards + redemption, admin (referrals / redemptions / settings).
 - Frontend Customer + Staff pages implemented; all three pages now live,
   Admin included (referrals + redemptions + settings; shipped in ae8a91a).
-- Backend tests: 66 passed + 1 skipped (vitest, 8 files).
+- Backend tests: 67 passed (vitest, 8 files).
 - E2E: two Playwright specs (customer-flow + staff-flow) green in CI.
 - CI: 3 jobs (Backend / Frontend / E2E), all green on main.
 - Docs: SPEC, API-CONTRACT, DECISIONS, HANDOVER, CODE-WALKTHROUGH,
