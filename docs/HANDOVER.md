@@ -5,7 +5,7 @@ PURPOSE: Onboarding document for new contributors and team. Gives an
          so a new team can start work without asking the outgoing team.
 READER: Any new team member joining the project. Read top to bottom
         the first time; then use as an index.
-LAST UPDATED: 2026-10-13 @ commit ae8a91a (Sprint 3: all three frontend pages implemented; Admin page landed).
+LAST UPDATED: 2026-10-16 (Wave-1 audit fixes + new staff E2E; not yet committed).
 SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
 -->
 
@@ -21,8 +21,8 @@ SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
   (register + referral + invite), Staff (key + lookup + redeem +
   confirm), Admin (key + referrals table + redemptions table +
   settings editor).
-- **Tests:** 60 passing + 1 skipped (backend, vitest). 1 E2E
-  (Playwright customer-flow), green in CI.
+- **Tests:** 66 passing + 1 skipped (backend, vitest, 8 files). 2 E2E specs
+  (Playwright customer-flow + staff-flow), green in CI.
 - **CI:** 3 jobs (Backend, Frontend, E2E), all green on main.
 - **Sprint 3 commits:** `efb3ec5` (referrals endpoint) → `ae8a91a`
   (frontend Admin page). See `git log --oneline` for the full trail.
@@ -34,7 +34,7 @@ SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
 - **Backend:** Node 20 + TypeScript + Fastify 5 + Prisma 5 + PostgreSQL 16
 - **Frontend:** React 19 + Vite 6 + TypeScript + Tailwind v3 + React Router v6
 - **Tests:** Vitest (backend integration against real Postgres), Playwright
-  (E2E, planned Sprint 3)
+  (E2E — two specs: customer-flow + staff-flow)
 - **CI:** GitHub Actions — backend job spins up Postgres service + migrate
   deploy + seed before running tests.
 
@@ -43,7 +43,7 @@ SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
     |-- backend/ Fastify API, Prisma schema, vitest tests
     |-- frontend/ Vite + React app, Tailwind, React Router
     |-- docs/ SPEC, API-CONTRACT, DECISIONS, HANDOVER, team docs/
-    |-- .github/workflows/ ci.yml (backend + frontend jobs)
+    |-- .github/workflows/ ci.yml (backend + frontend + e2e jobs)
     |-- docker-compose.yml local Postgres for development
 
 ### Layer boundaries (backend)

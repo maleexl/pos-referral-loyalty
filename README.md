@@ -8,7 +8,7 @@ CALLS: Links to docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md, docs/CODE
 
 # POS Referral & Loyalty System
 
-Referral and loyalty features for the POS platform. Private project, Sprint 1 in progress.
+Referral and loyalty features for the POS platform. Private project, Sprint 3 in progress.
 
 **Source of truth lives in docs/.** If this README and a doc disagree, the doc wins.
 
@@ -17,9 +17,9 @@ Referral and loyalty features for the POS platform. Private project, Sprint 1 in
 ## What this is
 
 A backend + frontend for running referrals and loyalty points off a POS.
-Backend (F1–F4) and the Customer + Staff pages are implemented; the Admin
-page is a Sprint 3 placeholder. The contract and its rationale live in
-`docs/API-CONTRACT.md` and `docs/DECISIONS.md`.
+Backend (F1–F4) and all three frontend pages are implemented — Customer,
+Staff, and Admin (referrals + redemptions + settings). The contract and
+its rationale live in `docs/API-CONTRACT.md` and `docs/DECISIONS.md`.
 
 - Backend — Node.js 20 · TypeScript · Fastify · Prisma · PostgreSQL
 - Frontend — React · Vite · Tailwind
@@ -124,9 +124,9 @@ Full walkthrough: `docs/CODE-WALKTHROUGH.md`.
     README.md           # this file
 
 ---
-## Quick start (skeleton)
+## Quick start
 
-> End-to-end local run is wired up in a later sprint. These steps describe the intended flow.
+> End-to-end local run is wired up today (Postgres + backend + frontend); these are the same steps CI and the demo use.
 
 ### 1. Prerequisites
 
@@ -158,22 +158,22 @@ Copy the templates and fill in local values. Never commit real .env files.
 
 ### 4. Tests
 
-    cd backend && npm test         # Vitest
-    cd frontend && npm test        # Vitest (placeholder)
-    npx playwright test            # E2E (scaffolded later)
+    cd backend && npm test         # Vitest — 66 passed + 1 skipped
+    cd frontend && npm run lint    # no frontend unit tests; CI runs lint + typecheck + build
+    cd tests && npm test           # E2E — customer-flow + staff-flow (servers must be running)
 
 ---
 
 ## Demo flow
 
-Placeholder — will be filled in Sprint 3 once features are wired up.
-Suggested outline:
+A runnable step-by-step walkthrough (with talk track and an API curl sheet)
+lives in `docs/DEMO-SCRIPT.md`. The happy path:
 
-1. Staff creates a referral for a customer at POS.
-2. Customer receives a link / code.
-3. Referred customer completes first purchase — points awarded.
-4. Dashboard shows balance + referral status.
-5. Expiry / rate values read from the settings table (see docs/DECISIONS.md #4).
+1. Customer registers at `/customer` and shares their referral code.
+2. A friend is invited; the referral is created as PENDING.
+3. The referee's first POS visit completes the referral — points awarded.
+4. Customer page shows the real balance + referral status; staff redeems.
+5. Admin page lists referrals / redemptions and edits tunable settings.
 
 ---
 
@@ -190,8 +190,9 @@ Suggested outline:
 
 - Branches: main + feature/* (PRs even when solo)
 - Commits: Conventional Commits — feat:, fix:, test:, docs:, chore:
-- CI: .github/workflows/ci.yml runs backend lint + typecheck + Vitest
-  (auto-activates once backend/package.json exists)
+- CI: .github/workflows/ci.yml runs three jobs — Backend (lint +
+  typecheck + Vitest), Frontend (lint + typecheck + build), and E2E
+  (Playwright customer-flow + staff-flow).
 
 ---
 
@@ -201,13 +202,12 @@ Sprint 3 — in progress. Delivered so far:
 
 - Backend (F1-F4) complete: customer register, referral create + complete,
   rewards + redemption, admin (referrals / redemptions / settings).
-- Frontend Customer + Staff pages implemented; Admin page is a Sprint 3
-  placeholder.
-- Backend tests: 60 passed + 1 skipped.
-- E2E: one Playwright spec (customer-flow) green in CI.
+- Frontend Customer + Staff pages implemented; all three pages now live,
+  Admin included (referrals + redemptions + settings; shipped in ae8a91a).
+- Backend tests: 66 passed + 1 skipped (vitest, 8 files).
+- E2E: two Playwright specs (customer-flow + staff-flow) green in CI.
 - CI: 3 jobs (Backend / Frontend / E2E), all green on main.
 - Docs: SPEC, API-CONTRACT, DECISIONS, HANDOVER, CODE-WALKTHROUGH,
-  QA-CHEATSHEET, plus per-team briefs under the project docs/.
+  QA-CHEATSHEET, DEMO-SCRIPT, plus per-team briefs under the project docs/.
 
-Remaining for Sprint 3: Admin page, deploy to Render (stretch goal),
-final polish.
+Remaining for Sprint 3: deploy to Render (stretch goal), final polish.

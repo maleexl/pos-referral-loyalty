@@ -4,7 +4,7 @@ PURPOSE: Walkthrough script for demonstrating the POS Referral & Loyalty
          system. Each step lists the action, what the audience sees, and a
          suggested line to say. Thai prose + English technical terms.
 READER: Whoever runs the demo (interview, stakeholder review, onboarding).
-LAST UPDATED: 2026-10-12 @ commit 993cdf75 (Sprint 3 close).
+LAST UPDATED: 2026-10-16 (Wave-1: §6 Admin + concurrency updated).
 SOURCE OF TRUTH: tests/e2e/customer-flow.spec.ts (runnable happy path),
                  docs/API-CONTRACT.md, docs/SPEC.md.
 -->
@@ -160,8 +160,6 @@ Terminal 3 — Frontend (Vite :5173):
 
 ---
 
-(§3 Admin + §4 API Tour + §5 5-min flow + §6 Known limitations + §7 Q&A — chunk ถัดไป)
-
 ## §3 Admin page — key prompt → referrals → redemptions → settings
 
 **หน้า:** http://localhost:5173/admin
@@ -294,11 +292,11 @@ Things ที่ MVP จงใจไม่ทำ — ตรงกับ SPEC §7
   ไม่มีของจริงส่ง
 - **ไม่มี multi-branch / multi-tenant** — ทุกอย่าง single-tenant
 - **ไม่มี QR code scanning** — manual code entry เท่านั้น
-- **Concurrent redemption issue (multi-terminal)** — balance read ไม่ได้ห่อ
-  transaction (ดู `issueRedemption.ts` comment) MVP สมมติ single-staff
-  Multi-terminal จะต้อง SERIALIZABLE หรือ advisory lock
-- **Admin UI ยังเป็น placeholder** — endpoints ทำงาน แต่หน้าเว็บว่าง
-  Sprint 4 จะทำให้ครบ
+- **Concurrent redemption (multi-terminal)** — แก้แล้วใน Wave-1: issue path
+  ห่อ `$transaction` ที่ isolationLevel `SERIALIZABLE` + bounded retry (P2034)
+  ไม่มี concurrency test ที่ commit เข้า CI (กัน flake) — QA verify แยก
+- **Admin UI implemented** — ครบ 3 sections (referrals / redemptions /
+  settings) ตั้งแต่ commit `ae8a91a`; §3 คือ walkthrough จริงแล้ว
 - **Staff table ไม่ได้ใช้ใน auth** — env-var keys เท่านั้น staff table
   forward-looking สำหรับอนาคต
 
