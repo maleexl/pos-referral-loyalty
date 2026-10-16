@@ -1,7 +1,7 @@
 /**
  * FILE: frontend/src/components/Layout.tsx
  * PURPOSE: Shared shell — top nav with links to the three pages, then the
- *          current page via <Outlet/>. Sprint 2 keeps styling minimal.
+ *          current page via <Outlet/>. Minimal Tailwind, no business logic.
  * CALLED BY: frontend/src/App.tsx (as a parent route element).
  * CALLS: react-router-dom (NavLink, Outlet).
  */

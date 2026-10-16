@@ -8,8 +8,8 @@
  *          DB rows; every run uses unique emails/phones.
  * CALLED BY: `npx playwright test` via tests/e2e/playwright.config.ts.
  * CALLS: @playwright/test (request fixture = seeding); frontend at baseURL
- *        (default :5173) which talks to backend at :3000 (both started
- *        externally — no webServer block in the config).
+ *        (default :5173) which talks to backend at :3000 — both dev servers
+ *        are managed by the config's webServer block.
  * DEPS: frontend Staff page @ 55bc79b (testids per the project docs);
  *       backend F1/F2/F3 + /internal/mock-pos/visits on :3000.
  */
@@ -28,7 +28,9 @@ test.describe('Staff flow — lookup, issue redemption, confirm', () => {
   const runId = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
   const seed = parseInt(runId, 16);
   const phoneSuffix = (n: number) => String(n % 1_000_000_000).padStart(9, '0');
-  const prefix = `t009-staff-${runId}`;
+  // Single source for the per-run data prefix (mirrors customer-flow's
+  // test-<domain>- prefix convention).
+  const prefix = `test-staff-${runId}`;
 
   const referrer = {
     email: `${prefix}-ref@example.com`,
@@ -40,12 +42,11 @@ test.describe('Staff flow — lookup, issue redemption, confirm', () => {
     phone: `0${phoneSuffix(seed + 1)}`,
     name: `E2E Staff Referee ${runId}`,
   };
-  // A referral completed by a POS visit awards points_per_referral (default
-  // 100) to the referrer. Redeem less than that so a second redemption of the
-  // same amount could not fit — keeps the assertions deterministic.
-  const POINTS_AWARDED = 100;
+  // Redeem less than one referral bonus so a second redemption of the same
+  // amount could not fit — keeps the assertions deterministic. The awarded
+  // amount itself is read back from the API; points_per_referral is never
+  // hardcoded here.
   const POINTS_TO_REDEEM = 40;
-  const POINTS_REMAINING = POINTS_AWARDED - POINTS_TO_REDEEM;
 
   test.beforeEach(async ({ page }) => {
     // Clear localStorage before any app script runs — a stale staff key from
@@ -77,18 +78,22 @@ test.describe('Staff flow — lookup, issue redemption, confirm', () => {
     expect(referral.status(), 'seed create referral').toBe(201);
 
     const visit = await request.post(`${API_URL}/internal/mock-pos/visits`, {
-      data: { customerEmail: referee.email, amount: 500, note: 't009 staff e2e' },
+      data: { customerEmail: referee.email, amount: 500, note: `${prefix} pos visit` },
     });
     expect(visit.status(), 'seed POS visit').toBe(200);
     const visitBody = await visit.json();
     expect(visitBody.referralCompleted, 'seed visit completes referral').toBe(true);
 
     // Prove the seeded balance is what the UI will display (contract F1/F3).
+    // Read the awarded amount from the API instead of hardcoding
+    // points_per_referral, so a settings change cannot break this spec.
     const rewards = await request.get(
       `${API_URL}/api/customers/${customerCode}/rewards`,
     );
     expect(rewards.status()).toBe(200);
-    expect((await rewards.json()).pointsBalance).toBe(POINTS_AWARDED);
+    const pointsAwarded: number = (await rewards.json()).pointsBalance;
+    expect(pointsAwarded, 'seed awards points').toBeGreaterThan(0);
+    const pointsRemaining = pointsAwarded - POINTS_TO_REDEEM;
 
     // ── 1. Staff key prompt ─────────────────────────────────────────
     await page.goto('/staff');
@@ -110,7 +115,7 @@ test.describe('Staff flow — lookup, issue redemption, confirm', () => {
 
     await expect(page.getByTestId('redemption-code')).toHaveText(/\S+/);
     await expect(page.getByTestId('redemption-remaining')).toHaveText(
-      String(POINTS_REMAINING),
+      String(pointsRemaining),
     );
     const redemptionCode = (
       await page.getByTestId('redemption-code').innerText()
@@ -118,8 +123,7 @@ test.describe('Staff flow — lookup, issue redemption, confirm', () => {
 
     // ── 4. Confirm the redemption ───────────────────────────────────
     // Assert the contract response (F3: status REDEEMED) AND the UI success
-    // state. There is no documented testid for the confirm success message,
-    // so the UI assertion targets the staff page's copy.
+    // state via its dedicated testid (see FRONTEND.md), not copied text.
     const [confirmResponse] = await Promise.all([
       page.waitForResponse(
         (r) =>
@@ -133,6 +137,6 @@ test.describe('Staff flow — lookup, issue redemption, confirm', () => {
     ]);
     expect(confirmResponse.status(), 'confirm status').toBe(200);
     expect((await confirmResponse.json()).status).toBe('REDEEMED');
-    await expect(page.getByText(/Confirmed at/i)).toBeVisible();
+    await expect(page.getByTestId('redeem-confirmed')).toBeVisible();
   });
 });

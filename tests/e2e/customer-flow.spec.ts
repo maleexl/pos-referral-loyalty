@@ -5,10 +5,10 @@
  *          zero balance, empty list), then invite a referee friend.
  * CALLED BY: `npx playwright test` via tests/e2e/playwright.config.ts.
  * CALLS: @playwright/test; frontend at baseURL (default :5173) which talks
- *        to backend at :3000 (both started externally).
- * DEPS: frontend Customer page — impl @ 5651b05, base testids @ ca08710,
- *       additional testids (register-phone/-name, referee-email/-phone/-name,
- *       referee-success) pending follow-up Frontend commit.
+ *        to backend at :3000 — both dev servers are managed by the config's
+ *        webServer block (auto-started, or reused when already running).
+ * DEPS: frontend Customer page — impl @ 5651b05; register/referral-card/
+ *       referee testids shipped (@ ca08710 + follow-up).
  */
 
 import { test, expect } from '@playwright/test';

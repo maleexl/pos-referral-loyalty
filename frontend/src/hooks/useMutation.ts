@@ -3,7 +3,8 @@
  * PURPOSE: Minimal mutation hook for POST/PATCH/DELETE. Exposes
  *          { run, loading, error, data, reset } — callers invoke run(input)
  *          from event handlers, not on mount.
- * CALLED BY: pages (Customer/Staff/Admin) in Sprint 3.
+ * CALLED BY: form components RegisterForm, RefereeForm, RedemptionForm,
+ *            ConfirmRedemptionForm, SettingsEditor.
  * CALLS: react, src/lib/api.ts.
  *
  * WHY a "callback-style" API instead of a per-mutation hook like

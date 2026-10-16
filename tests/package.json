@@ -2,7 +2,7 @@
   "name": "pos-referral-loyalty-e2e",
   "version": "0.0.0",
   "private": true,
-  "description": "Playwright E2E project. Owned by QA team. Runs against a live frontend (:5173) and backend (:3000) started externally by the maintainer / CI job.",
+  "description": "Playwright E2E project. Owned by QA team. Runs against the frontend (:5173) and backend (:3000); the config's webServer block starts both automatically and reuses them when already running.",
   "scripts": {
     "test": "playwright test --config=e2e/playwright.config.ts",
     "test:headed": "playwright test --config=e2e/playwright.config.ts --headed",

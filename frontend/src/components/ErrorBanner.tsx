@@ -3,7 +3,10 @@
  * PURPOSE: Shared error display for async views. Renders nothing when
  *          there is no error, otherwise shows ApiError.message verbatim
  *          per the binding design constraint (no invented copy).
- * CALLED BY: src/pages/Customer.tsx (and Staff/Admin in later steps).
+ * CALLED BY: src/pages/Customer.tsx and every async form/table component:
+ *            RegisterForm, ReferralCard, RefereeForm, CustomerLookup,
+ *            RedemptionForm, ConfirmRedemptionForm, ReferralTable,
+ *            RedemptionTable, SettingsEditor.
  * CALLS: src/lib/api.ts (ApiError type).
  */
 import type { ApiError } from '../lib/api.js';

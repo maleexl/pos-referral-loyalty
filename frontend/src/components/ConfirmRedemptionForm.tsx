@@ -103,7 +103,7 @@ export default function ConfirmRedemptionForm({
       <ErrorBanner error={error} />
 
       {confirmed && (
-        <p className="text-sm text-green-800">
+        <p data-testid="redeem-confirmed" className="text-sm text-green-800">
           Confirmed at {confirmed.redeemedAt}.
         </p>
       )}

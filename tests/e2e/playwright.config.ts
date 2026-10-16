@@ -1,10 +1,11 @@
 /**
  * FILE: tests/e2e/playwright.config.ts
  * PURPOSE: Playwright config for the Sprint 3 E2E specs. Single worker,
- *          headless Chromium, targets the dev frontend at :5173; the backend
- *          at :3000 must already be running (orchestrated externally).
+ *          headless Chromium, targets the dev frontend at :5173 and backend
+ *          at :3000. The webServer block starts both dev servers when they
+ *          are not already up, so `npm test` works from a clean state.
  * CALLED BY: `npm test` in tests/ (via --config=...); CI job in STEP 2.1.
- * CALLS: @playwright/test.
+ * CALLS: @playwright/test; backend `npm run dev` + frontend `npm run dev`.
  * DEPS: frontend Customer page @ ca08710 (testids), 5651b05 (impl).
  */
 
@@ -42,6 +43,27 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+
+  // WHY: start the dev servers for a clean `cd tests && npm test`, and stop
+  // them when the run ends. reuseExistingServer keeps the CI job (which starts
+  // the servers manually) and an operator's already-running stack working,
+  // without a port clash.
+  webServer: [
+    {
+      command: 'npm run dev',
+      cwd: '../../backend',
+      url: 'http://localhost:3000/health',
+      reuseExistingServer: true,
+      timeout: 60_000,
+    },
+    {
+      command: 'npm run dev',
+      cwd: '../../frontend',
+      url: 'http://localhost:5173',
+      reuseExistingServer: true,
+      timeout: 60_000,
     },
   ],
 });

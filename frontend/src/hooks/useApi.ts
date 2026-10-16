@@ -4,7 +4,9 @@
  *          expose { data, loading, error, refetch }. No cache layer by
  *          design; see DECISIONS-for-frontend note in the header of
  *          src/lib/api.ts.
- * CALLED BY: pages (Customer/Staff/Admin) in Sprint 3.
+ * CALLED BY: src/pages/Customer.tsx and the components that list/fetch:
+ *            ReferralCard, CustomerLookup, ReferralTable, RedemptionTable,
+ *            SettingsEditor.
  * CALLS: react, src/lib/api.ts.
  *
  * WHY no TanStack Query: the app has ~3 pages and no shared cache
