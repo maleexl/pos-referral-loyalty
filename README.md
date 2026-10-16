@@ -208,6 +208,6 @@ Sprint 3 — in progress. Delivered so far:
 - E2E: two Playwright specs (customer-flow + staff-flow) green in CI.
 - CI: 3 jobs (Backend / Frontend / E2E), all green on main.
 - Docs: SPEC, API-CONTRACT, DECISIONS, HANDOVER, CODE-WALKTHROUGH,
-  QA-CHEATSHEET, DEMO-SCRIPT, plus per-team briefs under the project docs/.
+  QA-CHEATSHEET, DEMO-SCRIPT.
 
 Remaining for Sprint 3: deploy to Render (stretch goal), final polish.

@@ -4,7 +4,7 @@
  *          headless Chromium, targets the dev frontend at :5173 and backend
  *          at :3000. The webServer block starts both dev servers when they
  *          are not already up, so `npm test` works from a clean state.
- * CALLED BY: `npm test` in tests/ (via --config=...); CI job in STEP 2.1.
+ * CALLED BY: `npm test` in tests/ (via --config=...); the CI e2e job.
  * CALLS: @playwright/test; backend `npm run dev` + frontend `npm run dev`.
  * DEPS: frontend Customer page @ ca08710 (testids), 5651b05 (impl).
  */

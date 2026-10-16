@@ -1,11 +1,11 @@
 <!--
 FILE: docs/HANDOVER.md
-PURPOSE: Onboarding document for new contributors and team. Gives an
+PURPOSE: Onboarding document for new contributors. Gives an
          honest snapshot of project state, architecture, patterns, and rules
          so a new team can start work without asking the outgoing team.
-READER: Any new team member joining the project. Read top to bottom
+READER: Any new contributor joining the project. Read top to bottom
         the first time; then use as an index.
-LAST UPDATED: 2026-10-16 (Wave-1 audit fixes + new staff E2E; not yet committed).
+LAST UPDATED: 2026-10-16 (Wave-1+2 audit fixes, staff E2E, docs refresh).
 SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
 -->
 
@@ -42,7 +42,7 @@ SOURCE OF TRUTH: docs/SPEC.md, docs/API-CONTRACT.md, docs/DECISIONS.md.
     .
     |-- backend/ Fastify API, Prisma schema, vitest tests
     |-- frontend/ Vite + React app, Tailwind, React Router
-    |-- docs/ SPEC, API-CONTRACT, DECISIONS, HANDOVER, team docs/
+    |-- docs/ SPEC, API-CONTRACT, DECISIONS, HANDOVER, guides
     |-- .github/workflows/ ci.yml (backend + frontend + e2e jobs)
     |-- docker-compose.yml local Postgres for development
 
@@ -71,7 +71,7 @@ Keys come from env (`STAFF_API_KEY`, `ADMIN_API_KEY`). No JWT (DECISIONS #5).
 ## 3. Source of truth
 
 These files define what the system does. Do not edit without telling the
-Maintainer — every team reads from the same originals.
+maintainer — the docs are the shared contract for the whole team.
 
 - **docs/SPEC.md** — business rules, features (F1–F4), data model, NFRs.
 - **docs/API-CONTRACT.md** — every endpoint, request/response shape,
@@ -80,8 +80,8 @@ Maintainer — every team reads from the same originals.
   settings table, API-key auth. Read this before proposing changes that
   contradict an accepted decision.
 
-If SPEC or API-CONTRACT needs an update, the request goes through the
-the maintainer. Do not fork the contract silently.
+If SPEC or API-CONTRACT needs an update, coordinate with the maintainer
+first. Do not fork the contract silently.
 
 ## 4. Patterns every team must follow
 
@@ -173,39 +173,26 @@ and (where possible) by tests / lint. Do not add exemptions silently.
 - [ ] No magic numbers — extract to a named `const` with a WHY comment
       (page sizes, retry counts, prefix lengths, MS_PER_DAY, etc.).
 
-## 6. Handover workflow
+## 6. Working agreements
 
-This project uses an Maintainer-driven workflow. Read this before you
-issue any command.
-
-- **One step at a time.** Each step produces exactly one artifact (a file,
-  a patch, a test run). Stop and wait for the maintainer to paste output
-  before proceeding.
-- **No terminal access for teams.** The maintainer runs every command
-  and pastes output back. Never assume a command succeeded.
-- **Never skip verification.** Every step ends with an explicit verify
-  block. If a paste looks truncated or odd (a common artifact of long
-  heredocs), stop and re-check with `grep`/`wc -l` rather than moving on.
-- **Watch for paste artifacts.** A `text` line appearing where a
-  ``` fence should be, or an echo command leaking into file content, both
-  indicate the terminal swallowed part of the input. Use indented code
-  blocks (4-space) in docs to avoid the issue.
+- **Small, verified steps.** Land one change at a time; every step ends
+  with an explicit verification (lint, typecheck, tests) before the next.
+- **Never assume success.** Re-check command output; if a paste looks
+  truncated or odd, re-run with `grep`/`wc -l` rather than moving on.
 - **Report failures immediately.** A red CI run or a failing test is not a
-  blocker to hide — paste the log so the maintainer can diagnose.
+  blocker to hide — share the log so it can be diagnosed.
 
-## 7. Team split (Sprint 3)
+## 7. Ownership map (Sprint 3)
 
-Four teams own disjoint areas. Do not cross the boundary without the
-maintainer's coordination.
+Four areas own disjoint parts of the repo. Do not cross a boundary without
+the maintainer's coordination.
 
-| Team | Owns | Does not own |
+| Area | Owns | Does not own |
 |------|------|--------------|
-| Git (maintainer) | docs/**, .github/**, README.md, deploy | backend/src/**, frontend/src/** |
+| Docs & infra | docs/**, .github/**, README.md, deploy | backend/src/**, frontend/src/** |
 | Backend | backend/src/**, backend/prisma/** | docs/**, frontend/** |
 | Frontend | frontend/src/**, frontend/public/** | backend/**, docs/** |
 | QA | backend/tests/**, tests/e2e/** | backend/src/**, frontend/src/** |
-
-Per-team briefs with task queues live in the project docs/.
 
 ---
 
@@ -213,4 +200,4 @@ Per-team briefs with task queues live in the project docs/.
 
 Maintained by the project maintainer. Update the LAST UPDATED line at
 the top of this file whenever a structural change lands (new top-level
-folder, new CI job, new team split).
+folder, new CI job, ownership changes).

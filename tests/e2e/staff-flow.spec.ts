@@ -10,7 +10,7 @@
  * CALLS: @playwright/test (request fixture = seeding); frontend at baseURL
  *        (default :5173) which talks to backend at :3000 — both dev servers
  *        are managed by the config's webServer block.
- * DEPS: frontend Staff page @ 55bc79b (testids per the project docs);
+ * DEPS: frontend Staff page (testids live in the page components);
  *       backend F1/F2/F3 + /internal/mock-pos/visits on :3000.
  */
 

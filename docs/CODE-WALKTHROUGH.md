@@ -554,17 +554,16 @@ The contract, grouped by page:
 
 **The rule.** Renaming a testid is a breaking change to the E2E
 suite. QA does not edit Frontend code; Frontend does not edit E2E
-specs. If a new testid is needed, the request travels through the
-maintainer and lands as two commits: Frontend adds the attribute,
-QA updates the spec.
+specs. If a new testid is needed, land it as two commits: the
+frontend adds the attribute, QA updates the spec.
 
 **[CHANGE POINT]** New form fields require a new testid. Follow the
 existing naming — verb-noun for actions (register-submit,
 referee-success), noun-state for reads (referral-code, points-balance).
 This is not enforced by tooling; the convention is the enforcement.
 
-**The Admin page has no testids yet.** When it lands, they go here and
-in `the project docs` in the same commit.
+**Admin-page testids.** They were added with the implementation and follow
+the same naming rule; keep new hooks consistent with the list above.
 
 ---
 
@@ -572,7 +571,7 @@ in `the project docs` in the same commit.
 
 Scope: backend integration tests (`backend/tests/*.test.ts`, vitest)
 and the Playwright E2E layer (`tests/e2e/*.spec.ts`). QA does not edit
-source code; bugs go to the maintainer with the failing assertion
+source code; bugs are reported with the failing assertion
 and the seed data.
 
 ### 3.1 The test environment
@@ -715,8 +714,8 @@ localStorage origin.
 1. Create a new spec under `tests/e2e/`.
 2. Reuse the `data-testid` contract from §2.5 — do not add selectors
    that are not in the table.
-3. If you need a new testid, request it via the maintainer. QA does
-   not edit Frontend code.
+3. If you need a new testid, add it in a small frontend change first.
+   QA does not edit Frontend code.
 
 ---
 

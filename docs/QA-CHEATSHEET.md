@@ -133,10 +133,10 @@ config errors and bad import paths that typecheck alone would miss.
 **E2E** `needs: [backend, frontend]`, creates `frontend/.env` (the
 `VITE_API_URL` module-init trap), starts both dev servers in the
 background, waits for `:3000/health` and `:5173`, installs Chromium, and
-runs the Playwright customer-flow spec. On failure, the HTML report
-uploads as an artifact.
+runs the Playwright E2E specs (customer-flow + staff-flow). On failure,
+the HTML report uploads as an artifact.
 
-→ Proof: `.github/workflows/ci.yml`, docs/CODE-WALKTHROUGH.md §3.4, the project docs §STEP 2.1
+→ Proof: `.github/workflows/ci.yml`, docs/CODE-WALKTHROUGH.md §3.4
 
 ---
 

@@ -1,15 +1,15 @@
 # E2E tests (Playwright)
 
-Owned by the QA team -- see the project docs.
+Acceptance coverage for the customer and staff journeys.
 Specs drive the real frontend against the real backend; no mocks.
 
 ## Prerequisites
 
-- Backend running on http://localhost:3000 (DB migrated + seeded).
-- Frontend running on http://localhost:5173.
 - One-time install: cd tests && npm install.
-
-Both servers are started externally (the CI job in STEP 2.1 will do this).
+- The `webServer` block in the Playwright config starts the backend
+  (http://localhost:3000, DB migrated + seeded) and the frontend
+  (http://localhost:5173) on demand, and reuses them when they are
+  already running (CI starts them explicitly before the run).
 
 ## Run
 
@@ -32,4 +32,4 @@ HTML report is written to tests/e2e/playwright-report/ (gitignored).
 
 tests/e2e/playwright.config.ts -- one project (Chromium), 1 worker
 (specs share one backend), list + html reporters, trace / screenshot /
-video captured on failure only.
+video captured on failure only, `webServer` starts/reuses both dev servers.
