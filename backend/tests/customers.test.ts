@@ -73,7 +73,7 @@ describe('POST/GET /api/customers', () => {
     expect(typeof body.createdAt).toBe('string');
   });
 
-  it('POST duplicate email → 409 CONFLICT', async () => {
+  it('POST duplicate email → 409 EMAIL_EXISTS', async () => {
     // Create the first one, then attempt the same email with different phone.
     await app.inject({
       method: 'POST',
@@ -96,10 +96,10 @@ describe('POST/GET /api/customers', () => {
     });
 
     expect(res.statusCode).toBe(409);
-    expect(res.json()).toMatchObject({ code: 'CONFLICT' });
+    expect(res.json()).toMatchObject({ code: 'EMAIL_EXISTS' });
   });
 
-  it('POST duplicate phone → 409 CONFLICT', async () => {
+  it('POST duplicate phone → 409 PHONE_EXISTS', async () => {
     await app.inject({
       method: 'POST',
       url: '/api/customers',
@@ -121,7 +121,7 @@ describe('POST/GET /api/customers', () => {
     });
 
     expect(res.statusCode).toBe(409);
-    expect(res.json()).toMatchObject({ code: 'CONFLICT' });
+    expect(res.json()).toMatchObject({ code: 'PHONE_EXISTS' });
   });
 
   it('POST invalid email → 400 INVALID_INPUT with Zod details', async () => {

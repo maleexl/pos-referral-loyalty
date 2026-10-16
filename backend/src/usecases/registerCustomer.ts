@@ -28,6 +28,12 @@ const NAME_MAX_LENGTH = 100;
 // WHY: Thai mobile numbers are exactly 10 digits, no spaces/dashes.
 const PHONE_REGEX = /^\d{10}$/;
 
+// --- API-CONTRACT F1 error codes ------------------------------------------
+// WHY: named constants — the route/tests reference the same strings, and a
+// rename surfaces at compile time instead of drifting silently.
+const CODE_EMAIL_EXISTS = 'EMAIL_EXISTS';
+const CODE_PHONE_EXISTS = 'PHONE_EXISTS';
+
 // --- Referral-code generation ---------------------------------------------
 function extractPrefix(name: string): string {
   // WHY: uppercase + keep only A-Z0-9. Names in Thai/CJK produce an empty
@@ -84,7 +90,7 @@ export type RegisterCustomerInput = z.infer<typeof RegisterCustomerInput>;
 // imposing one here.
 // WHY: caller-specific codes let one physical operation (create a customer)
 // emit different API-CONTRACT codes depending on the endpoint's context.
-// F1 uses the defaults (CONFLICT); F2a passes REFEREE_*_EXISTS so clients
+// F1 passes EMAIL_EXISTS/PHONE_EXISTS; F2a passes REFEREE_*_EXISTS so clients
 // can distinguish "referee email taken" from a generic conflict.
 export interface CustomerCreateErrorCodes {
   emailExists?: string;
@@ -132,5 +138,10 @@ export async function registerCustomer(input: unknown): Promise<Customer> {
   // WHY: pass the PrismaClient as the tx argument. PrismaClient is a
   // structural superset of Prisma.TransactionClient, so a single-insert path
   // and a multi-insert tx path share one implementation.
-  return createCustomerInTx(prisma, data);
+  // WHY: pass the F1 code overrides — API-CONTRACT documents EMAIL_EXISTS /
+  // PHONE_EXISTS here, not the generic CONFLICT the helper defaults to.
+  return createCustomerInTx(prisma, data, {
+    emailExists: CODE_EMAIL_EXISTS,
+    phoneExists: CODE_PHONE_EXISTS
+  });
 }

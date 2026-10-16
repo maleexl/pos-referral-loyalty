@@ -4,26 +4,34 @@
  *          no business logic here. Response shapes match docs/API-CONTRACT.md F1.
  * CALLED BY: backend/src/app.ts (registered as a route group).
  * CALLS: backend/src/usecases/registerCustomer.ts,
- *        backend/src/usecases/getCustomerByCode.ts.
+ *        backend/src/usecases/getCustomerByCode.ts,
+ *        backend/src/usecases/listCustomerRewards.ts,
+ *        backend/src/usecases/listCustomerReferrals.ts.
  */
 import type { FastifyInstance } from 'fastify';
 import type { Reward } from '@prisma/client';
 import { registerCustomer } from '../usecases/registerCustomer.js';
 import { getCustomerByCode } from '../usecases/getCustomerByCode.js';
-import { listCustomerRewards } from '../usecases/listCustomerRewards.js';
+import { listCustomerRewards, computePointsBalance } from '../usecases/listCustomerRewards.js';
 import { listCustomerReferrals } from '../usecases/listCustomerReferrals.js';
 
 // WHY: shape the customer for the wire. Keep this next to the routes so the
 // API contract has exactly one place to change if the frontend needs more.
 // Never expose internal fields we might add later (e.g. soft-delete flags).
-function toApi(customer: {
-  id: string;
-  email: string;
-  phone: string;
-  name: string;
-  referralCode: string;
-  createdAt: Date;
-}): {
+// WHY: pointsBalance is derived from the ledger, not a column on Customer, so
+// the caller computes it and passes it in. It defaults to 0 so create
+// responses (a brand-new customer has no rewards) match API-CONTRACT F1.
+function toApi(
+  customer: {
+    id: string;
+    email: string;
+    phone: string;
+    name: string;
+    referralCode: string;
+    createdAt: Date;
+  },
+  pointsBalance = 0
+): {
   id: string;
   email: string;
   phone: string;
@@ -38,10 +46,7 @@ function toApi(customer: {
     phone: customer.phone,
     name: customer.name,
     referralCode: customer.referralCode,
-    // WHY: pointsBalance is derived (SUM of ledger). New customers have no
-    // rewards yet, so it is always 0 here. Later endpoints that read
-    // rewards will compute the real balance.
-    pointsBalance: 0,
+    pointsBalance,
     createdAt: customer.createdAt.toISOString()
   };
 }
@@ -80,7 +85,10 @@ export async function customerRoutes(app: FastifyInstance): Promise<void> {
     '/api/customers/:referralCode',
     async (req) => {
       const customer = await getCustomerByCode(req.params.referralCode);
-      return toApi(customer);
+      // WHY: same computation as GET .../rewards (F3) so the two endpoints
+      // can never disagree about a customer's balance (AUD-001).
+      const pointsBalance = await computePointsBalance(customer.id);
+      return toApi(customer, pointsBalance);
     }
   );
 

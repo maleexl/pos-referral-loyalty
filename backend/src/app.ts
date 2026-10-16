@@ -115,7 +115,14 @@ export async function buildApp(
   // encapsulated. Order matters only for wildcard routes — none here yet.
   await app.register(customerRoutes);
   await app.register(referralRoutes);
-  await app.register(internalRoutes);
+  // WHY: /internal/mock-pos/* stands in for the POS and has no auth (see
+  // routes/internal.ts). It must never be reachable in production, so we skip
+  // registration entirely there — a prod request then falls through to the
+  // custom 404 envelope above instead of awarding points. Dev/CI/E2E keep the
+  // mock. No env var, no contract change: the route simply does not exist.
+  if (process.env.NODE_ENV !== 'production') {
+    await app.register(internalRoutes);
+  }
   // WHY prefix here (not inside the plugin): the auth hook in staffRoutes
   // would still apply; the URL shape is a composition concern, not the
   // plugin's. This also makes /staff a single grep target for ops review.

@@ -233,6 +233,43 @@ describe('POST /api/referrals', () => {
     expect(res.json()).toMatchObject({ code: 'REFEREE_PHONE_EXISTS' });
   });
 
+  it('referee already has a referral → 409 REFEREE_HAS_REFERRER', async () => {
+    // WHY: referees are new customers (SPEC F2). Once a customer is linked as
+    // someone's referee they can never be one again (BR-2). This exercises the
+    // documented code — previously the flow errored earlier with the generic
+    // REFEREE_EMAIL_EXISTS and REFEREE_HAS_REFERRER was unreachable (AUD-006).
+    const referrerA = await createReferrer(app, 'has-referrer-a', 80);
+    const refereeEmail = testEmail('has-referrer-referee');
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/referrals',
+      payload: {
+        referrerCode: referrerA,
+        refereeEmail,
+        refereePhone: testPhone(81),
+        refereeName: 'Once Referred'
+      }
+    });
+    expect(first.statusCode).toBe(201);
+
+    // A second referral for the same email — from a DIFFERENT referrer, so the
+    // rejection can only come from the referee's existing referral.
+    const referrerB = await createReferrer(app, 'has-referrer-b', 82);
+    const second = await app.inject({
+      method: 'POST',
+      url: '/api/referrals',
+      payload: {
+        referrerCode: referrerB,
+        refereeEmail,
+        refereePhone: testPhone(83),
+        refereeName: 'Once Referred'
+      }
+    });
+
+    expect(second.statusCode).toBe(409);
+    expect(second.json()).toMatchObject({ code: 'REFEREE_HAS_REFERRER' });
+  });
+
   it('atomicity: self-referral failure leaves no orphan referee customer', async () => {
     // WHY: the self-referral guard runs BEFORE the referee is created, inside
     // the same transaction. If a future refactor moved the check AFTER the

@@ -123,6 +123,20 @@ describe('F4 — admin endpoints', () => {
     expect(res.json()).toMatchObject({ code: 'UNAUTHORIZED' });
   });
 
+  it('GET /admin/redemptions — no auth header → 401 UNAUTHORIZED', async () => {
+    // WHY: the auth hook is plugin-scoped, so every /admin route must reject
+    // an anonymous request — not just the one route we happen to test first.
+    const res = await app.inject({ method: 'GET', url: '/admin/redemptions' });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  it('GET /admin/settings — no auth header → 401 UNAUTHORIZED', async () => {
+    const res = await app.inject({ method: 'GET', url: '/admin/settings' });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
   // ---------------------------------------------------------------------
   // GET /admin/referrals
   // ---------------------------------------------------------------------
@@ -239,6 +253,18 @@ describe('F4 — admin endpoints', () => {
     const res = await app.inject({
       method: 'GET',
       url: '/admin/referrals?limit=0',
+      headers: adminHeaders()
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ code: 'INVALID_INPUT' });
+  });
+
+  it('GET /admin/referrals?status=BOGUS → 400 INVALID_INPUT', async () => {
+    // WHY: status is validated against the Prisma enum via z.nativeEnum — an
+    // unknown value is a client error, not a silently-ignored filter.
+    const res = await app.inject({
+      method: 'GET',
+      url: '/admin/referrals?status=BOGUS',
       headers: adminHeaders()
     });
     expect(res.statusCode).toBe(400);

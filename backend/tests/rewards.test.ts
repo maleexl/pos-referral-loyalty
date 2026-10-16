@@ -258,7 +258,20 @@ describe('F3 — rewards list + redemption', () => {
     expect(res.json()).toMatchObject({ code: 'UNAUTHORIZED' });
   });
 
-  it('POST /staff/redeem — unknown customer → 404 NOT_FOUND', async () => {
+  it('POST /staff/redeem/confirm — missing key → 401 UNAUTHORIZED', async () => {
+    // WHY: auth is a plugin-scoped onRequest hook, so it must fire before
+    // body parsing — no customer/setup needed for a 401.
+    const res = await app.inject({
+      method: 'POST',
+      url: '/staff/redeem/confirm',
+      payload: { redemptionCode: 'ANYCODE1' }
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
+  it('POST /staff/redeem — unknown customer → 404 CUSTOMER_NOT_FOUND', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/staff/redeem',
@@ -267,7 +280,7 @@ describe('F3 — rewards list + redemption', () => {
     });
 
     expect(res.statusCode).toBe(404);
-    expect(res.json()).toMatchObject({ code: 'NOT_FOUND' });
+    expect(res.json()).toMatchObject({ code: 'CUSTOMER_NOT_FOUND' });
   });
 
   // ---------------------------------------------------------------------
@@ -414,5 +427,43 @@ describe('F3 — rewards list + redemption', () => {
       url: `/api/customers/${customer.referralCode}/rewards`
     });
     expect(afterConfirm.json().pointsBalance).toBe(70);
+  });
+
+  // ---------------------------------------------------------------------
+  // GET /api/customers/:referralCode — pointsBalance (AUD-001)
+  // ---------------------------------------------------------------------
+
+  it('GET /api/customers/:code — pointsBalance reflects the ledger', async () => {
+    const customer = await createCustomerViaApi(app, 'lookup-balance', 14, 'Lookup Balance');
+
+    // From a referral bonus (positive entry).
+    await seedReward(customer.id, { type: 'REFERRAL_BONUS', points: 100 });
+    const afterBonus = await app.inject({
+      method: 'GET',
+      url: `/api/customers/${customer.referralCode}`
+    });
+    expect(afterBonus.statusCode).toBe(200);
+    // WHY: same shape as create (API-CONTRACT F1) — the only difference is the
+    // now-real balance instead of the previous hardcoded 0.
+    expect(afterBonus.json()).toMatchObject({
+      id: customer.id,
+      referralCode: customer.referralCode,
+      pointsBalance: 100
+    });
+
+    // And after issuing a redemption (negative entry, reserved at issue time).
+    const redeem = await app.inject({
+      method: 'POST',
+      url: '/staff/redeem',
+      headers: staffHeaders(),
+      payload: { customerCode: customer.referralCode, points: 30 }
+    });
+    expect(redeem.statusCode).toBe(200);
+
+    const afterRedeem = await app.inject({
+      method: 'GET',
+      url: `/api/customers/${customer.referralCode}`
+    });
+    expect(afterRedeem.json().pointsBalance).toBe(70);
   });
 });

@@ -102,7 +102,46 @@ export async function createReferral(
       throw new ForbiddenError('Cannot refer yourself', CODE_SELF_REFERRAL);
     }
 
-    // 3) Create referee — reuses F1 helper for codegen + retry policy.
+    // 3) Detect whether the referee email/phone already belongs to a customer.
+    // WHY: referees must be NEW customers (SPEC F2). An existing customer
+    // cannot be turned into a referee, so we resolve the collision here — and
+    // can emit the documented REFEREE_HAS_REFERRER when that customer is
+    // already someone's referee (BR-2 / API-CONTRACT F2). The check-then-write
+    // is backed by the DB UNIQUE constraints below as the race fallback.
+    const existingByEmail = await tx.customer.findUnique({
+      where: { email: data.refereeEmail }
+    });
+    const existingByPhone = await tx.customer.findUnique({
+      where: { phone: data.refereePhone }
+    });
+    const existingIds = [existingByEmail?.id, existingByPhone?.id].filter(
+      (id): id is string => id !== undefined
+    );
+    if (existingIds.length > 0) {
+      const existingReferral = await tx.referral.findFirst({
+        where: { refereeId: { in: existingIds } }
+      });
+      if (existingReferral) {
+        throw new ConflictError(
+          'Referee already has a referrer',
+          CODE_REFEREE_HAS_REFERRER
+        );
+      }
+      // WHY: email wins over phone — matches createCustomerInTx's check order,
+      // so a client hitting both collisions sees a stable, predictable code.
+      if (existingByEmail) {
+        throw new ConflictError(
+          'Referee email already registered',
+          CODE_REFEREE_EMAIL_EXISTS
+        );
+      }
+      throw new ConflictError(
+        'Referee phone already registered',
+        CODE_REFEREE_PHONE_EXISTS
+      );
+    }
+
+    // 4) Create referee — reuses F1 helper for codegen + retry policy.
     const referee = await createCustomerInTx(
       tx,
       {
@@ -116,7 +155,7 @@ export async function createReferral(
       }
     );
 
-    // 4) Create referral — see WHY on the defensive catch below.
+    // 5) Create referral — see WHY on the defensive catch below.
     try {
       const referral = await tx.referral.create({
         data: {
